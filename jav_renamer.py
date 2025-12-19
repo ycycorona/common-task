@@ -29,8 +29,10 @@ JAV 视频文件重命名工具
 - 会跳过隐藏文件和非视频文件
 - 需要安装 jvav 库依赖
 
-支持的视频格式：
-.mp4, .mkv, .avi, .wmv, .mov, .flv, .rmvb, .m4v
+支持的文件格式：
+- 视频：.mp4, .mkv, .avi, .wmv, .mov, .flv, .rmvb, .m4v
+- 音频：.mp3, .wav, .flac, .opus, .m4a
+- 字幕：.srt, .ass, .vtt
 
 文件名示例：
 原始文件：hhd800.com@ZRK-002.mp4
@@ -47,6 +49,9 @@ from jvav import JavDbUtil
 
 # --- 配置 ---
 VIDEO_EXTENSIONS = {'.mp4', '.mkv', '.avi', '.wmv', '.mov', '.flv', '.rmvb', '.m4v'}
+AUDIO_EXTENSIONS = {'.mp3', '.wav', '.flac', '.opus', '.m4a'}
+SUBTITLE_EXTENSIONS = {'.srt', '.ass', '.vtt'}
+SUPPORTED_EXTENSIONS = VIDEO_EXTENSIONS | AUDIO_EXTENSIONS | SUBTITLE_EXTENSIONS
 
 # --- 脚本核心 ---
 
@@ -128,9 +133,9 @@ def main(dry_run, target_directory):
             # 跳过目录和非文件项
             if not os.path.isfile(original_path):
                 continue
-            # 检查是否为视频文件（严格判断扩展名）
+            # 检查是否为支持的文件（视频、音频、字幕）
             _, ext = os.path.splitext(filename)
-            if not ext or ext.lower() not in VIDEO_EXTENSIONS:
+            if not ext or ext.lower() not in SUPPORTED_EXTENSIONS:
                 continue
             jav_id = extract_id_from_filename(filename)
             if not jav_id:
