@@ -98,13 +98,18 @@ def send_completion_notification(success=True, message="JAV重命名任务已完
         # 调用codex_notify.py发送通知
         script_path = os.path.join(os.path.dirname(__file__), "codex_notify.py")
         if os.path.exists(script_path):
-            subprocess.run([
+            print(f"正在发送桌面通知: {message}")
+            result = subprocess.run([
                 sys.executable, 
                 script_path, 
                 json.dumps(notification_data)
-            ], check=False)
+            ], capture_output=True, text=True)
+            if result.returncode != 0:
+                print(f"通知发送失败 (exit code {result.returncode}): {result.stderr}")
+        else:
+            print("警告: 未找到 codex_notify.py，无法发送通知。")
     except Exception as e:
-        # 静默处理通知发送错误，不影响主流程
+        print(f"发送通知时发生异常: {e}")
         pass
 
 def main(dry_run, target_directory):
