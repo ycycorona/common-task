@@ -163,6 +163,9 @@ def main(dry_run, target_directory):
 
                 # 清理标题
                 clean_title = sanitize_filename(info.get('title', ''))
+                # 优化：如果标题过长，进行截断
+                if len(clean_title) > 50:
+                    clean_title = clean_title[:50] + "..."
 
                 # 构建新文件名，追加分段标识
                 stars = info.get('stars') or []
