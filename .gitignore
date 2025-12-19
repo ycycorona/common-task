@@ -27,3 +27,6 @@ venv/
 .vscode/
 .idea/
 .claude/
+
+# Specific Ignore
+FC2*
