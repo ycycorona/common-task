@@ -2,6 +2,29 @@
 
 这是一个包含常用 Python 脚本的项目，主要用于文件处理、通知和媒体转换。
 
+## 系统要求 (System Requirements)
+
+本项目脚本主要在 macOS 环境下开发，部分功能依赖以下系统级命令行工具：
+
+1.  **FFmpeg**: 用于所有音视频处理（音频提取、静音替换、格式转换）。
+    ```bash
+    brew install ffmpeg
+    ```
+2.  **terminal-notifier**: 用于在脚本任务完成后发送 macOS 桌面通知。
+    ```bash
+    brew install terminal-notifier
+    ```
+3.  **sips**: macOS 系统的脚本化图像处理系统，用于 HEIC 到 JPEG 的批量转换（macOS 自带）。
+4.  **SetFile**: macOS 命令行工具，用于修改和保留文件的创建日期（通常随 Xcode Command Line Tools 安装）。
+
+## 安装方式
+
+```bash
+git clone <repository-url>
+cd common-task
+pip install -r requirements.txt
+```
+
 ## 脚本列表
 
 ### 1. JAV 视频重命名工具 (`jav_renamer.py`)
@@ -78,3 +101,13 @@ python replace_audio_silence.py /input/dir /output/dir --dry-run
 ```bash
 python codex_notify.py '{"type": "agent-turn-complete", "last-assistant-message": "任务已完成"}'
 ```
+
+---
+
+### 4. 辅助 Shell 脚本
+
+项目中还包含以下用于快速处理媒体文件的 Shell 脚本：
+
+-   **`heic_batch_convert.sh`**: 批量将 HEIC 图片转换为 JPEG 或 PNG 格式。
+-   **`video2flac.sh` / `video2opus.sh`**: 快速从视频中提取音频并转换为高压缩率的 FLAC 或 Opus 格式（适配 OpenAI Whisper 或其他 AI 音频转录工具）。
+-   **`video_split_to_flac.sh`**: 将长视频按时长切分（默认 10 分钟），并自动提取切分后的音轨为 FLAC 格式。
