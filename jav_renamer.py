@@ -140,6 +140,10 @@ def main(dry_run, target_directory):
     
     # 递归扫描所有子文件夹
     for root, dirs, files in os.walk(target_directory):
+        # 排除名为 no_need 的文件夹
+        if 'no_need' in dirs:
+            dirs.remove('no_need')
+            
         files_in_directory = sorted(files)
         for filename in files_in_directory:
             original_path = os.path.join(root, filename)
