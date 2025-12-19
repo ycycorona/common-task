@@ -41,6 +41,7 @@ JAV 视频文件重命名工具
 
 import os
 import re
+import sys
 import time
 import argparse
 import subprocess
@@ -56,6 +57,11 @@ SUPPORTED_EXTENSIONS = VIDEO_EXTENSIONS | AUDIO_EXTENSIONS | SUBTITLE_EXTENSIONS
 # 自动从获取的标题中移除的关键词列表
 TITLE_EXCLUDE_KEYWORDS = [
     '【FANZA限定】',
+]
+
+# 自动从原始文件名中移除的正则表达式列表（仅在远程搜索失败时用于本地优化）
+FILENAME_CLEAN_PATTERNS = [
+    r'^hhd800\.com@',
 ]
 
 # --- 脚本核心 ---
@@ -166,37 +172,48 @@ def main(dry_run, target_directory):
             try:
                 # 使用 jvav 库获取信息
                 code, info = jav_db.get_av_by_id(jav_id, is_nice=False, is_uncensored=False)
-                if code != 200 or not info or not info.get('title'):
-                    print(" └─ 结果: 未找到信息或信息不完整，跳过.\n")
-                    error_count += 1
-                    continue
-
-                # 清理标题
-                raw_title = info.get('title', '')
-                # 优化：移除指定的关键词
-                for keyword in TITLE_EXCLUDE_KEYWORDS:
-                    raw_title = raw_title.replace(keyword, '')
                 
-                clean_title = sanitize_filename(raw_title.strip())
-                # 优化：如果标题过长，进行截断
-                if len(clean_title) > 50:
-                    clean_title = clean_title[:50] + "..."
-
-                # 构建新文件名，追加分段标识
-                stars = info.get('stars') or []
-                if stars:
-                    # 只取第一个演员并做非法字符清理
-                    first_actor = stars[0]
-                    name = first_actor.get('name') if isinstance(first_actor, dict) else str(first_actor)
-                    actor_name = sanitize_filename(name)
-                    # 若标题已以" 空格+演员"结尾，则不再添加方括号演员
-                    if clean_title.endswith(f' {actor_name}'):
-                        new_filename = f"{jav_id} {clean_title}{part_suffix}{ext}"
-                    else:
-                        # 分段标识加在片名后、演员名前
-                        new_filename = f"{jav_id} {clean_title}{part_suffix} [{actor_name}]{ext}"
+                if code != 200 or not info or not info.get('title'):
+                    print(" └─ 结果: 未找到远程信息，尝试本地优化...")
+                    # 进行本地文件名优化
+                    optimized_base = base_no_ext
+                    for pattern in FILENAME_CLEAN_PATTERNS:
+                        optimized_base = re.sub(pattern, '', optimized_base)
+                    
+                    if optimized_base == base_no_ext:
+                        print(" └─ 结果: 本地无优化建议，跳过.\n")
+                        error_count += 1
+                        continue
+                    
+                    new_filename = f"{optimized_base}{ext}"
                 else:
-                    new_filename = f"{jav_id} {clean_title}{part_suffix}{ext}"
+                    # 分支：成功获取远程信息，构建标准格式
+                    # 清理标题
+                    raw_title = info.get('title', '')
+                    # 优化：移除指定的关键词
+                    for keyword in TITLE_EXCLUDE_KEYWORDS:
+                        raw_title = raw_title.replace(keyword, '')
+                    
+                    clean_title = sanitize_filename(raw_title.strip())
+                    # 优化：如果标题过长，进行截断
+                    if len(clean_title) > 50:
+                        clean_title = clean_title[:50] + "..."
+
+                    # 构建新文件名，追加分段标识
+                    stars = info.get('stars') or []
+                    if stars:
+                        # 只取第一个演员并做非法字符清理
+                        first_actor = stars[0]
+                        name = first_actor.get('name') if isinstance(first_actor, dict) else str(first_actor)
+                        actor_name = sanitize_filename(name)
+                        # 若标题已以" 空格+演员"结尾，则不再添加方括号演员
+                        if clean_title.endswith(f' {actor_name}'):
+                            new_filename = f"{jav_id} {clean_title}{part_suffix}{ext}"
+                        else:
+                            # 分段标识加在片名后、演员名前
+                            new_filename = f"{jav_id} {clean_title}{part_suffix} [{actor_name}]{ext}"
+                    else:
+                        new_filename = f"{jav_id} {clean_title}{part_suffix}{ext}"
                 
                 new_path = os.path.join(root, new_filename)
 
