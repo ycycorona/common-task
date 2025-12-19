@@ -62,7 +62,7 @@ TITLE_EXCLUDE_KEYWORDS = [
 
 # 自动从原始文件名中移除的正则表达式列表（仅在远程搜索失败时用于本地优化）
 FILENAME_CLEAN_PATTERNS = [
-    r'^hhd800\.com@',
+    r'hhd800\.com@',
 ]
 
 # --- 脚本核心 ---
