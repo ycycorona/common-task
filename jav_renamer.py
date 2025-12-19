@@ -53,6 +53,11 @@ AUDIO_EXTENSIONS = {'.mp3', '.wav', '.flac', '.opus', '.m4a'}
 SUBTITLE_EXTENSIONS = {'.srt', '.ass', '.vtt'}
 SUPPORTED_EXTENSIONS = VIDEO_EXTENSIONS | AUDIO_EXTENSIONS | SUBTITLE_EXTENSIONS
 
+# 自动从获取的标题中移除的关键词列表
+TITLE_EXCLUDE_KEYWORDS = [
+    '【FANZA限定】',
+]
+
 # --- 脚本核心 ---
 
 def sanitize_filename(text):
@@ -162,7 +167,12 @@ def main(dry_run, target_directory):
                     continue
 
                 # 清理标题
-                clean_title = sanitize_filename(info.get('title', ''))
+                raw_title = info.get('title', '')
+                # 优化：移除指定的关键词
+                for keyword in TITLE_EXCLUDE_KEYWORDS:
+                    raw_title = raw_title.replace(keyword, '')
+                
+                clean_title = sanitize_filename(raw_title.strip())
                 # 优化：如果标题过长，进行截断
                 if len(clean_title) > 50:
                     clean_title = clean_title[:50] + "..."
