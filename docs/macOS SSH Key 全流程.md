@@ -25,6 +25,7 @@ chmod 700 ~/.ssh
 命令：
 
 ssh-keygen -t ed25519 -a 64 -f ~/.ssh/id_ed25519 -C "macbook-$(whoami)"
+ssh-keygen -t ed25519 -a 64 -f ~/.ssh/id_ed25519_vps -C "mac-$(whoami)"
 
 ------------------------------------------------------------
 
