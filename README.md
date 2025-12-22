@@ -37,6 +37,9 @@ pip install -r requirements.txt
 - **标准化命名**: 将文件重命名为 `番号 标题 [演员].扩展名` 的格式。
 - **多格式支持**: 支持视频 (`.mp4`, `.mkv` 等)、音频 (`.mp3`, `.flac` 等) 以及字幕 (`.srt`, `.ass` 等)。
 - **分段支持**: 自动处理和保留分段标记（如 A/B/C 或 1/2/3）。
+- **智能清理**: 自动移除标题中的指定关键词，并对过长标题进行截断（默认 50 字符）。
+- **本地兜底**: 远程未匹配时，会尝试基于本地文件名做清理后重命名。
+- **目录忽略**: 自动跳过名为 `no_need` 的文件夹。
 - **安全执行**: 
   - 默认开启预览模式 (Dry Run)，只显示计划的变更。
   - 遇到已存在的目标文件名会自动跳过。
@@ -110,5 +113,11 @@ python codex_notify.py '{"type": "agent-turn-complete", "last-assistant-message"
 项目中还包含以下用于快速处理媒体文件的 Shell 脚本：
 
 -   **`heic_batch_convert.sh`**: 批量将 HEIC 图片转换为 JPEG 或 PNG 格式。
--   **`video2flac.sh` / `video2opus.sh`**: 快速从视频中提取音频并转换为高压缩率的 FLAC 或 Opus 格式（适配 OpenAI Whisper 或其他 AI 音频转录工具）。
+-   **`video2flac.sh` / `video2opus.sh`**: 快速从视频中提取音频并转换为高压缩率的 FLAC 或 Opus 格式（适配 OpenAI Whisper 或其他 AI 音频转录工具）。`video2opus.sh` 会跳过隐藏文件/目录。
 -   **`video_split_to_flac.sh`**: 将长视频按时长切分（默认 10 分钟），并自动提取切分后的音轨为 FLAC 格式。
+
+---
+
+## 文档
+
+- `docs/macOS SSH Key 全流程.md`: macOS 上生成/管理 SSH Key、配置 Keychain、安装公钥到服务器的完整流程。
