@@ -241,7 +241,7 @@ def main(dry_run, target_directory):
                 error_count += 1
             
             # 礼貌地等待，避免IP被封
-            time.sleep(5)
+            time.sleep(3)
 
     print("--- 所有操作完成 ---")
     # 发送完成通知

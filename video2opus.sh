@@ -35,6 +35,10 @@ process_file() {
 
   local filename
   filename="$(basename "$in")"
+  # 忽略以 . 开头的隐藏文件
+  if [ "${filename#.?}" != "$filename" ]; then
+    return
+  fi
   local dirname
   dirname="$(dirname "$in")"
 
@@ -93,7 +97,7 @@ elif [ -d "$INPUT_PATH" ]; then
     if is_video_file "$f"; then
       video_files+=("$f")
     fi
-  done < <(find "$INPUT_PATH" -type f -print0)
+  done < <(find "$INPUT_PATH" -path '*/.*' -prune -o -type f -print0)
 
   total=${#video_files[@]}
   if [ "$total" -eq 0 ]; then
