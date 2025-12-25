@@ -113,6 +113,7 @@ python codex_notify.py '{"type": "agent-turn-complete", "last-assistant-message"
 项目中还包含以下用于快速处理媒体文件的 Shell 脚本：
 
 -   **`heic_batch_convert.sh`**: 批量将 HEIC 图片转换为 JPEG 或 PNG 格式。
+-   **`video2aac.sh`**: 批量从视频中提取音频并转换为 AAC 格式（256k 码率）。支持单个文件或递归处理整个目录，自动识别常见视频格式（mp4/mkv/mov/avi/flv/webm/m4v/wmv），跳过已存在的 AAC 文件避免重复转换。
 -   **`video2flac.sh` / `video2opus.sh`**: 快速从视频中提取音频并转换为高压缩率的 FLAC 或 Opus 格式（适配 OpenAI Whisper 或其他 AI 音频转录工具）。`video2opus.sh` 会跳过隐藏文件/目录。
 -   **`video_split_to_flac.sh`**: 将长视频按时长切分（默认 10 分钟），并自动提取切分后的音轨为 FLAC 格式。
 
