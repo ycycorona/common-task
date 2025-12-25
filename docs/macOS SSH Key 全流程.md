@@ -67,6 +67,7 @@ ssh-add -l
 方案A：如果你的系统里有 ssh-copy-id（有就用）
 
 ssh-copy-id -i ~/.ssh/id_ed25519.pub USER@HOST
+ssh-copy-id -i ~/.ssh/id_ed25519_vps.pub USER@HOST
 
 方案B：macOS 默认可能没有 ssh-copy-id（通用替代命令，推荐一定能用）
 
