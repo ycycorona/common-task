@@ -58,9 +58,52 @@ python jav_renamer.py /path/to/videos
 python jav_renamer.py /path/to/videos --execute
 ```
 
+
 ---
 
-### 2. 音频静音替换工具 (`replace_audio_silence.py`)
+### 2. Hugging Face 仓库下载工具 (`hf_snapshot_download.py`)
+
+基于 `huggingface_hub.snapshot_download()` 的命令行工具，用于快速下载 Hugging Face 上的模型、数据集或 Space。
+
+**功能特点:**
+- **多类型支持**: 支持下载模型 (model)、数据集 (dataset) 和 Space。
+- **版本控制**: 支持指定分支、标签或 commit hash。
+- **文件过滤**: 支持通过 include/exclude 模式选择性下载文件。
+- **断点续传**: 网络中断后可继续下载（`--resume`）。
+- **私有仓库**: 支持使用 token 访问私有和门控仓库。
+- **跨平台优化**: 支持禁用符号链接（推荐在 macOS/Windows 上使用 `--no-symlinks`）。
+- **自定义缓存**: 支持指定自定义缓存目录。
+
+**依赖:**
+- `huggingface_hub` 库
+
+**使用方法:**
+```bash
+# 基本用法 - 下载完整模型
+python3 hf_snapshot_download.py kotoba-tech/kotoba-whisper-v2.0-faster
+
+# 推荐用法 - 不使用符号链接 + 断点续传
+python3 hf_snapshot_download.py kotoba-tech/kotoba-whisper-v2.0-faster \
+  -o ./kotoba-whisper --repo-type model --no-symlinks --resume
+
+# 只下载部分文件（如模型权重和配置）
+python3 hf_snapshot_download.py kotoba-tech/kotoba-whisper-v2.0-faster \
+  -o ./kotoba --no-symlinks --resume \
+  --include "*.bin" "*.json"
+
+# 下载数据集
+python3 hf_snapshot_download.py username/dataset-name \
+  --repo-type dataset -o ./my-dataset
+
+# 使用 token 下载私有仓库
+python3 hf_snapshot_download.py private-org/private-model \
+  --token hf_xxxxxxxxxxxx --no-symlinks
+```
+
+---
+
+### 3. 音频静音替换工具 (`replace_audio_silence.py`)
+
 
 用于批量替换 MP4 视频文件中的音频轨道为静音轨道的工具。这在需要去除原始音频但保持视频结构或为了特定播放设备兼容性时非常有用。
 
@@ -88,7 +131,7 @@ python replace_audio_silence.py /input/dir /output/dir --dry-run
 
 ---
 
-### 3. Codex 通知工具 (`codex_notify.py`)
+### 4. Codex 通知工具 (`codex_notify.py`)
 
 一个简单的脚本，用于发送桌面通知。主要被其他脚本（如 `jav_renamer.py`）调用，用于在长时间运行的任务结束时提醒用户。
 
@@ -108,7 +151,7 @@ python codex_notify.py '{"type": "agent-turn-complete", "last-assistant-message"
 
 ---
 
-### 4. 辅助 Shell 脚本
+### 5. 辅助 Shell 脚本
 
 项目中还包含以下用于快速处理媒体文件的 Shell 脚本：
 
