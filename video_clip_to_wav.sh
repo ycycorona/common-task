@@ -15,17 +15,31 @@ set -euo pipefail
 #   00:01:30.500
 
 if [ $# -lt 3 ] || [ $# -gt 5 ]; then
-  echo "用法: $0 <视频文件> <开始时间> <结束时间> [输出目录] [音频格式: wav|mp3]"
+  echo "用法: $0 <视频文件> <开始时间> <结束时间> [输出目录|音频格式] [音频格式: wav|mp3]"
+  echo "提示: 如果省略输出目录直接写音频格式，它会自动识别。例如: $0 video.mp4 00:00 00:05 mp3"
   exit 1
 fi
 
 INPUT_FILE="$1"
 START_TIME="$2"
 END_TIME="$3"
-OUTPUT_DIR="${4:-$(dirname "$INPUT_FILE")}"
-OUTPUT_FORMAT="${5:-wav}"
-# 转为小写
-OUTPUT_FORMAT=$(echo "$OUTPUT_FORMAT" | tr '[:upper:]' '[:lower:]')
+
+if [ $# -eq 4 ]; then
+  arg4=$(echo "$4" | tr '[:upper:]' '[:lower:]')
+  if [[ "$arg4" == "wav" || "$arg4" == "mp3" ]]; then
+    OUTPUT_DIR="$(dirname "$INPUT_FILE")"
+    OUTPUT_FORMAT="$arg4"
+  else
+    OUTPUT_DIR="$4"
+    OUTPUT_FORMAT="wav"
+  fi
+elif [ $# -eq 5 ]; then
+  OUTPUT_DIR="$4"
+  OUTPUT_FORMAT=$(echo "$5" | tr '[:upper:]' '[:lower:]')
+else
+  OUTPUT_DIR="$(dirname "$INPUT_FILE")"
+  OUTPUT_FORMAT="wav"
+fi
 
 if [ ! -f "$INPUT_FILE" ]; then
   echo "错误: 文件不存在: $INPUT_FILE"
