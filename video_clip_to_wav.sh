@@ -56,13 +56,15 @@ mkdir -p "$OUTPUT_DIR"
 
 filename="$(basename "$INPUT_FILE")"
 name="${filename%.*}"
+ext="${filename##*.}"
 
 safe_start="${START_TIME//:/-}"
 safe_start="${safe_start//./-}"
 safe_end="${END_TIME//:/-}"
 safe_end="${safe_end//./-}"
 
-output_video="${OUTPUT_DIR}/${name}_clip_${safe_start}_${safe_end}.mp4"
+# 保持与原视频相同的后缀名，避免 ffmpeg 使用 -c copy 时遇到容器不支持该编码的问题
+output_video="${OUTPUT_DIR}/${name}_clip_${safe_start}_${safe_end}.${ext}"
 output_audio="${OUTPUT_DIR}/${name}_clip_${safe_start}_${safe_end}.${OUTPUT_FORMAT}"
 
 to_seconds() {
