@@ -95,7 +95,7 @@ echo "输出视频: $output_video"
 # 截取视频片段（极速切分：快速 seek + 直接流拷贝）
 ffmpeg -y -ss "$START_TIME" -i "$INPUT_FILE" \
   -t "$duration" \
-  -c copy -movflags +faststart \
+  -c copy \
   "$output_video"
 
 echo "正在生成音频 (${OUTPUT_FORMAT}): $output_audio"
