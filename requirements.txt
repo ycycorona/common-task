@@ -1,2 +1,3 @@
 jvav
 huggingface_hub
+yt-dlp

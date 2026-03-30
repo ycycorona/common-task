@@ -151,14 +151,39 @@ python codex_notify.py '{"type": "agent-turn-complete", "last-assistant-message"
 
 ---
 
-### 5. 辅助 Shell 脚本
+### 5. DMM 预览视频下载工具 (`download_dmm_preview.py`)
+
+一个用于获取并下载 DMM (FANZA) 高清预览视频流媒体（m3u8 解析合并）的 Python 脚本。
+
+**功能特点:**
+- **突破地域限制**: 原生支持通过环境变量自动使用 HTTP 或 SOCKS5 代理。
+- **自动获取高清原画**: 智能识别并从基础的影片小样视频重定向到高清版视频分发链接。
+- **流媒体切片合并**: 内部集成 `yt-dlp` 处理最新 DMM 弃用 MP4 改用的 m3u8 分片，并无损合并为本地的 mp4。
+- **防鬼影/死链保护**: 能自动探测由于代理失明或只下载到零碎切片残余出的垃圾空壳文件（低于 10kb），并在运行前主动清理，确保下载内容完整有效。
+
+**依赖:**
+- `jvav` 库
+- `yt-dlp`
+
+**使用方法:**
+鉴于 DMM 严格屏蔽非日本国内 IP，强烈建议用携带纯净日本节点的 SOCKS5 代理或者 HTTP 代理声明并运行：
+
+```bash
+# 假设您的本地代理端绑定在 127.0.0.1:1080 端口，且已切换成日本节点：
+all_proxy=socks5h://127.0.0.1:1080 python download_dmm_preview.py SSIS-001
+```
+
+---
+
+### 6. 辅助 Shell 脚本
 
 项目中还包含以下用于快速处理媒体文件的 Shell 脚本：
 
 -   **`heic_batch_convert.sh`**: 批量将 HEIC 图片转换为 JPEG 或 PNG 格式。
 -   **`video2aac.sh`**: 批量从视频中提取音频并转换为 AAC 格式（256k 码率）。支持单个文件或递归处理整个目录，自动识别常见视频格式（mp4/mkv/mov/avi/flv/webm/m4v/wmv），跳过已存在的 AAC 文件避免重复转换。
 -   **`video2flac.sh` / `video2opus.sh`**: 快速从视频中提取音频并转换为高压缩率的 FLAC 或 Opus 格式（适配 OpenAI Whisper 或其他 AI 音频转录工具）。`video2opus.sh` 会跳过隐藏文件/目录。
--   **`video_split_to_flac.sh`**: 将长视频按时长切分（默认 10 分钟），并自动提取切分后的音轨为 FLAC 格式。
+-   **`video_clip_to_wav.sh`**: 从视频中按指定的起止时间极速截取片段，并提取其音频。音频输出支持格式为 Whisper 友好的 WAV (16kHz 单声道 PCM) 或高质量 VBR 的 MP3。支持自动识别省略参数以输出至原目录。
+-   **`video_split_to_flac.sh`**: 将长视频或音频文件按指定时长切分（默认 10 分钟），并自动将切分后的分段音频转换为 FLAC（默认）或 MP3 格式。
 -   **`run_whisper_screen.sh`**: VideoCaptioner 转录任务管理器。使用 screen 在后台运行转录任务，固定复用单一 session 和 window，支持任务检测、避免重复启动和 Attached 状态保护。
 
 ---
