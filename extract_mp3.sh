@@ -5,12 +5,12 @@ set -euo pipefail
 show_help() {
   cat <<EOF
 Usage:
-  ./extract_mp3.sh [OPTIONS] INPUT_FILE [OUTPUT_FILE]
+  ./extract_mp3.sh [OPTIONS] INPUT_FILE [INPUT_FILE ...]
 
 Examples:
-  ./extract_mp3.sh video.mp4        # creates video.mp3
-  ./extract_mp3.sh video.mp4 audio.mp3
-  ./extract_mp3.sh "/path/to/video.mov" "/path/to/output.mp3"
+  ./extract_mp3.sh video.mp4                  # creates video.mp3
+  ./extract_mp3.sh a.mp4 b.mkv c.mov          # creates a.mp3 b.mp3 c.mp3
+  ./extract_mp3.sh --bitrate 128k *.mp4       # batch process with options
 
 Options:
   -b, --bitrate VALUE        MP3 bitrate, default: 192k
@@ -27,12 +27,12 @@ Options:
 
 Examples:
   ./extract_mp3.sh --bitrate 128k input.mp4
-  ./extract_mp3.sh --channels 2 --bitrate 256k input.mkv output.mp3
-  ./extract_mp3.sh --audio-stream 0:a:1 input.mkv output.mp3
-  ./extract_mp3.sh --no-copy-mp3 input.avi output.mp3
-  ./extract_mp3.sh --threads 10 --no-copy-mp3 input.mov output.mp3
-  ./extract_mp3.sh --start 00:10:00 --end 00:20:00 input.mp4 clip.mp3
-  ./extract_mp3.sh --start 600 --duration 300 input.mp4 clip.mp3
+  ./extract_mp3.sh --channels 2 --bitrate 256k input.mkv
+  ./extract_mp3.sh --audio-stream 0:a:1 input.mkv
+  ./extract_mp3.sh --no-copy-mp3 input.avi
+  ./extract_mp3.sh --threads 10 --no-copy-mp3 input.mov
+  ./extract_mp3.sh --start 00:10:00 --end 00:20:00 input.mp4
+  ./extract_mp3.sh --start 600 --duration 300 input.mp4
 EOF
 }
 
@@ -121,20 +121,6 @@ if [[ ${#POSITIONAL_ARGS[@]} -lt 1 ]]; then
   exit 1
 fi
 
-if [[ ${#POSITIONAL_ARGS[@]} -gt 2 ]]; then
-  echo "Error: too many positional arguments."
-  echo
-  show_help
-  exit 1
-fi
-
-INPUT="${POSITIONAL_ARGS[0]}"
-
-if [[ ! -f "$INPUT" ]]; then
-  echo "Error: input file does not exist: $INPUT"
-  exit 1
-fi
-
 if ! command -v ffmpeg >/dev/null 2>&1; then
   echo "Error: ffmpeg not found."
   echo
@@ -175,7 +161,9 @@ build_trim_args() {
     args+=("-t" "$DURATION")
   fi
 
-  printf '%s\0' "${args[@]}"
+  if [[ ${#args[@]} -gt 0 ]]; then
+    printf '%s\0' "${args[@]}"
+  fi
 }
 
 sanitize_time_for_filename() {
@@ -213,86 +201,117 @@ while IFS= read -r -d '' arg; do
   TRIM_ARGS+=("$arg")
 done < <(build_trim_args)
 
-if [[ ${#POSITIONAL_ARGS[@]} -ge 2 ]]; then
-  OUTPUT="${POSITIONAL_ARGS[1]}"
-else
+TOTAL="${#POSITIONAL_ARGS[@]}"
+SUCCEEDED=0
+FAILED=0
+
+for ((i=0; i<TOTAL; i++)); do
+  INPUT="${POSITIONAL_ARGS[$i]}"
+  INDEX="$((i + 1))"
+  PERCENT="$(( INDEX * 100 / TOTAL ))"
+
+  echo
+  echo "========================================"
+  echo "[$INDEX/$TOTAL | ${PERCENT}%] Processing: $INPUT"
+  echo "========================================"
+  echo
+
+  if [[ ! -f "$INPUT" ]]; then
+    echo "Error: input file does not exist: $INPUT"
+    FAILED="$((FAILED + 1))"
+    continue
+  fi
+
   OUTPUT="$(build_default_output_name "$INPUT")"
+  TMP_OUTPUT="${OUTPUT%.mp3}.tmp.$$.$i.mp3"
+  FFPROBE_AUDIO_STREAM="${AUDIO_STREAM#0:}"
+  INPUT_AUDIO_CODEC="$(ffprobe -v error -select_streams "$FFPROBE_AUDIO_STREAM" -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 "$INPUT" | head -n 1 || true)"
+
+  echo "Input:        $INPUT"
+  echo "Output:       $OUTPUT"
+  echo "Audio stream: $AUDIO_STREAM"
+  echo "Bitrate:      $MP3_BITRATE"
+  echo "Sample rate:  $MP3_SAMPLE_RATE"
+  echo "Channels:     $MP3_CHANNELS"
+  echo "Input codec:  ${INPUT_AUDIO_CODEC:-unknown}"
+  echo "Copy MP3:     $COPY_MP3_AUDIO"
+  echo "CPU cores:    $CPU_CORES"
+  echo "FFmpeg threads: $FFMPEG_THREADS"
+  echo "Start time:   ${START_TIME:-<beginning>}"
+  if [[ -n "$END_TIME" ]]; then
+    echo "End time:     $END_TIME"
+  elif [[ -n "$DURATION" ]]; then
+    echo "Duration:     $DURATION"
+  else
+    echo "End time:     <end>"
+  fi
+  echo
+
+  echo "Checking audio streams..."
+  ffprobe -v error \
+    -select_streams a \
+    -show_entries stream=index,codec_name,channels,sample_rate:stream_tags=language,title \
+    -of default=noprint_wrappers=1 \
+    "$INPUT" || true
+
+  echo
+  echo "Extracting audio to MP3..."
+
+  set +e
+  if [[ "$COPY_MP3_AUDIO" == "1" && "$INPUT_AUDIO_CODEC" == "mp3" ]]; then
+    echo "Input audio is already MP3; copying audio stream without re-encoding."
+    ffmpeg -hide_banner -loglevel warning -y \
+      ${TRIM_ARGS[@]+"${TRIM_ARGS[@]}"} \
+      -i "$INPUT" \
+      -map "$AUDIO_STREAM" \
+      -vn \
+      -sn \
+      -dn \
+      -codec:a copy \
+      -map_metadata -1 \
+      -f mp3 \
+      "$TMP_OUTPUT"
+  else
+    ffmpeg -hide_banner -loglevel warning -y \
+      ${TRIM_ARGS[@]+"${TRIM_ARGS[@]}"} \
+      -i "$INPUT" \
+      -map "$AUDIO_STREAM" \
+      -vn \
+      -sn \
+      -dn \
+      -ac "$MP3_CHANNELS" \
+      -ar "$MP3_SAMPLE_RATE" \
+      -codec:a libmp3lame \
+      -b:a "$MP3_BITRATE" \
+      -map_metadata -1 \
+      -threads "$FFMPEG_THREADS" \
+      -f mp3 \
+      "$TMP_OUTPUT"
+  fi
+  FFMPEG_EXIT_CODE=$?
+  set -e
+
+  if [[ $FFMPEG_EXIT_CODE -ne 0 ]]; then
+    echo "Error: ffmpeg failed for $INPUT (exit code: $FFMPEG_EXIT_CODE)"
+    rm -f "$TMP_OUTPUT"
+    FAILED="$((FAILED + 1))"
+    continue
+  fi
+
+  mv "$TMP_OUTPUT" "$OUTPUT"
+  SUCCEEDED="$((SUCCEEDED + 1))"
+
+  echo
+  echo "Done."
+  echo "Created: $OUTPUT"
+
+done
+
+echo
+echo "========================================"
+echo "All tasks completed: $SUCCEEDED succeeded, $FAILED failed (total: $TOTAL)"
+echo "========================================"
+
+if [[ $FAILED -gt 0 ]]; then
+  exit 1
 fi
-
-TMP_OUTPUT="${OUTPUT%.mp3}.tmp.$$.mp3"
-FFPROBE_AUDIO_STREAM="${AUDIO_STREAM#0:}"
-INPUT_AUDIO_CODEC="$(ffprobe -v error -select_streams "$FFPROBE_AUDIO_STREAM" -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 "$INPUT" | head -n 1 || true)"
-
-echo "Input:        $INPUT"
-echo "Output:       $OUTPUT"
-echo "Audio stream: $AUDIO_STREAM"
-echo "Bitrate:      $MP3_BITRATE"
-echo "Sample rate:  $MP3_SAMPLE_RATE"
-echo "Channels:     $MP3_CHANNELS"
-echo "Input codec:  ${INPUT_AUDIO_CODEC:-unknown}"
-echo "Copy MP3:     $COPY_MP3_AUDIO"
-echo "CPU cores:    $CPU_CORES"
-echo "FFmpeg threads: $FFMPEG_THREADS"
-echo "Start time:   ${START_TIME:-<beginning>}"
-if [[ -n "$END_TIME" ]]; then
-  echo "End time:     $END_TIME"
-elif [[ -n "$DURATION" ]]; then
-  echo "Duration:     $DURATION"
-else
-  echo "End time:     <end>"
-fi
-echo
-
-echo "Checking audio streams..."
-ffprobe -v error \
-  -select_streams a \
-  -show_entries stream=index,codec_name,channels,sample_rate:stream_tags=language,title \
-  -of default=noprint_wrappers=1 \
-  "$INPUT" || true
-
-echo
-echo "Extracting audio to MP3..."
-
-if [[ "$COPY_MP3_AUDIO" == "1" && "$INPUT_AUDIO_CODEC" == "mp3" ]]; then
-  echo "Input audio is already MP3; copying audio stream without re-encoding."
-  ffmpeg -hide_banner -y \
-    ${TRIM_ARGS[@]+"${TRIM_ARGS[@]}"} \
-    -i "$INPUT" \
-    -map "$AUDIO_STREAM" \
-    -vn \
-    -sn \
-    -dn \
-    -codec:a copy \
-    -map_metadata -1 \
-    -f mp3 \
-    "$TMP_OUTPUT"
-else
-  ffmpeg -hide_banner -y \
-    ${TRIM_ARGS[@]+"${TRIM_ARGS[@]}"} \
-    -i "$INPUT" \
-    -map "$AUDIO_STREAM" \
-    -vn \
-    -sn \
-    -dn \
-    -ac "$MP3_CHANNELS" \
-    -ar "$MP3_SAMPLE_RATE" \
-    -codec:a libmp3lame \
-    -b:a "$MP3_BITRATE" \
-    -map_metadata -1 \
-    -threads "$FFMPEG_THREADS" \
-    -f mp3 \
-    "$TMP_OUTPUT"
-fi
-
-mv "$TMP_OUTPUT" "$OUTPUT"
-
-echo
-echo "Done."
-echo "Created: $OUTPUT"
-
-echo
-echo "Output info:"
-ffprobe -v error \
-  -show_entries format=duration,size,bit_rate:stream=codec_name,channels,sample_rate,bit_rate \
-  -of default=noprint_wrappers=1 \
-  "$OUTPUT"
