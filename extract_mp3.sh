@@ -281,6 +281,7 @@ for ((i=0; i<TOTAL; i++)); do
       -dn \
       -ac "$MP3_CHANNELS" \
       -ar "$MP3_SAMPLE_RATE" \
+      -af "aresample=async=1:first_pts=0" \
       -codec:a libmp3lame \
       -b:a "$MP3_BITRATE" \
       -map_metadata -1 \

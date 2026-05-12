@@ -171,6 +171,10 @@ python codex_notify.py '{"type": "agent-turn-complete", "last-assistant-message"
 ```bash
 # 假设您的本地代理端绑定在 127.0.0.1:1080 端口，且已切换成日本节点：
 all_proxy=socks5h://127.0.0.1:1080 python download_dmm_preview.py SSIS-001
+
+# SSH 动态代理，把本地 1080 端口转成代理端口。
+# 命令：
+ssh -D 1080 -N -C 用户名@你的VPSIP
 ```
 
 ---
