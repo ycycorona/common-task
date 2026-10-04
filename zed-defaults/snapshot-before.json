@@ -1,0 +1,898 @@
+{
+  "entries": [
+    {
+      "handler": "dev.zed.Zed",
+      "target": "a.py",
+      "uti": "public.python-script"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.pyi",
+      "uti": "dyn.ah62d4rv4ge81a8pm"
+    },
+    {
+      "handler": "org.115browser.115Browser",
+      "target": "a.js",
+      "uti": "com.netscape.javascript-source"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.cjs",
+      "uti": "dyn.ah62d4rv4ge80g4xx"
+    },
+    {
+      "handler": "com.adobe.AfterEffects.application",
+      "target": "a.jsx",
+      "uti": "dyn.ah62d4rv4ge80y652"
+    },
+    {
+      "handler": "com.colliderli.iina",
+      "target": "a.ts",
+      "uti": "public.mpeg-2-transport-stream"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "target": "a.tsx",
+      "uti": "dyn.ah62d4rv4ge81k652"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "target": "a.c",
+      "uti": "public.c-source"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "target": "a.h",
+      "uti": "public.c-header"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "target": "a.cc",
+      "uti": "public.c-plus-plus-source"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "target": "a.hpp",
+      "uti": "public.c-plus-plus-header"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.cs",
+      "uti": "dyn.ah62d4rv4ge80g62"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.java",
+      "uti": "com.sun.java-source"
+    },
+    {
+      "handler": "",
+      "target": "a.kt",
+      "uti": "dyn.ah62d4rv4ge8007a"
+    },
+    {
+      "handler": "",
+      "target": "a.kts",
+      "uti": "dyn.ah62d4rv4ge8007dx"
+    },
+    {
+      "handler": "",
+      "target": "a.scala",
+      "uti": "dyn.ah62d4rv4ge81g25brvuu"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "target": "a.go",
+      "uti": "dyn.ah62d4rv4ge80s52"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "target": "a.rs",
+      "uti": "dyn.ah62d4rv4ge81e62"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "target": "a.rb",
+      "uti": "public.ruby-script"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.php",
+      "uti": "public.php-script"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.swift",
+      "uti": "public.swift-source"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.m",
+      "uti": "public.objective-c-source"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.mm",
+      "uti": "public.objective-c-plus-plus-source"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.lua",
+      "uti": "dyn.ah62d4rv4ge8027pb"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.r",
+      "uti": "com.apple.rez-source"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.dart",
+      "uti": "dyn.ah62d4rv4ge80k2pwsu"
+    },
+    {
+      "handler": "org.openemu.OpenEmu",
+      "target": "a.vb",
+      "uti": "dyn.ah62d4rv4ge81q2u"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.clj",
+      "uti": "dyn.ah62d4rv4ge80g5dn"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.cljs",
+      "uti": "dyn.ah62d4rv4ge80g5dnsq"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.ml",
+      "uti": "dyn.ah62d4rv4ge8045a"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.mli",
+      "uti": "dyn.ah62d4rv4ge8045dm"
+    },
+    {
+      "handler": "",
+      "target": "a.hs",
+      "uti": "dyn.ah62d4rv4ge80u62"
+    },
+    {
+      "handler": "",
+      "target": "a.erl",
+      "uti": "dyn.ah62d4rv4ge80n6xq"
+    },
+    {
+      "handler": "",
+      "target": "a.hrl",
+      "uti": "dyn.ah62d4rv4ge80u6xq"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "target": "a.ex",
+      "uti": "dyn.ah62d4rv4ge80n8a"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "target": "a.exs",
+      "uti": "dyn.ah62d4rv4ge80n8dx"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.fsx",
+      "uti": "dyn.ah62d4rv4ge80q652"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "target": "a.rkt",
+      "uti": "dyn.ah62d4rv4ge81e45y"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "target": "a.scm",
+      "uti": "dyn.ah62d4rv4ge81g25r"
+    },
+    {
+      "handler": "com.mitchellh.ghostty",
+      "target": "a.sh",
+      "uti": "public.shell-script"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.bash",
+      "uti": "public.bash-script"
+    },
+    {
+      "handler": "com.mitchellh.ghostty",
+      "target": "a.zsh",
+      "uti": "public.zsh-script"
+    },
+    {
+      "handler": "",
+      "target": "a.fish",
+      "uti": "dyn.ah62d4rv4ge80q4pxra"
+    },
+    {
+      "handler": "com.mitchellh.ghostty",
+      "target": "a.pl",
+      "uti": "public.perl-script"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.ps1",
+      "uti": "dyn.ah62d4rv4ge81a63v"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.bat",
+      "uti": "dyn.ah62d4rv4ge80e2py"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.cmd",
+      "uti": "dyn.ah62d4rv4ge80g5pe"
+    },
+    {
+      "handler": "com.google.Chrome",
+      "target": "a.html",
+      "uti": "public.html"
+    },
+    {
+      "handler": "org.115browser.115Browser",
+      "target": "a.xhtml",
+      "uti": "public.xhtml"
+    },
+    {
+      "handler": "org.torproject.torbrowser",
+      "target": "a.css",
+      "uti": "public.css"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.scss",
+      "uti": "dyn.ah62d4rv4ge81g25xsq"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.sass",
+      "uti": "dyn.ah62d4rv4ge81g2pxsq"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.less",
+      "uti": "dyn.ah62d4rv4ge8023pxsq"
+    },
+    {
+      "handler": "",
+      "target": "a.styl",
+      "uti": "dyn.ah62d4rv4ge81g7d3ru"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.vue",
+      "uti": "dyn.ah62d4rv4ge81q7pf"
+    },
+    {
+      "handler": "",
+      "target": "a.svelte",
+      "uti": "dyn.ah62d4rv4ge81g7xfrv4gn"
+    },
+    {
+      "handler": "",
+      "target": "a.astro",
+      "uti": "dyn.ah62d4rv4ge80c65ysm1u"
+    },
+    {
+      "handler": "com.jubler.Jubler",
+      "target": "a.xml",
+      "uti": "public.xml"
+    },
+    {
+      "handler": "com.pixelmatorteam.pixelmator.x",
+      "target": "a.svg",
+      "uti": "public.svg-image"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "target": "a.md",
+      "uti": "net.daringfireball.markdown"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.rst",
+      "uti": "dyn.ah62d4rv4ge81e65y"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.tex",
+      "uti": "dyn.ah62d4rv4ge81k3p2"
+    },
+    {
+      "handler": "com.apple.TextEdit",
+      "target": "a.txt",
+      "uti": "public.plain-text"
+    },
+    {
+      "handler": "com.apple.iWork.Numbers",
+      "target": "a.csv",
+      "uti": "public.comma-separated-values-text"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "target": "a.json",
+      "uti": "public.json"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.yaml",
+      "uti": "public.yaml"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "target": "a.toml",
+      "uti": "dyn.ah62d4rv4ge81k55rru"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.ini",
+      "uti": "dyn.ah62d4rv4ge80w5xm"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.cfg",
+      "uti": "dyn.ah62d4rv4ge80g3xh"
+    },
+    {
+      "handler": "com.adobe.AfterEffects.application",
+      "target": "a.conf",
+      "uti": "com.ruikq.decar"
+    },
+    {
+      "handler": "",
+      "target": "a.env",
+      "uti": "dyn.ah62d4rv4ge80n5x0"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.properties",
+      "uti": "dyn.ah62d4rv4ge81a6xtsbw1e7dmqz3u"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.lock",
+      "uti": "dyn.ah62d4rv4ge80255drq"
+    },
+    {
+      "handler": "com.dbx.app",
+      "target": "a.sql",
+      "uti": "org.postgresql.pgadmin.sql"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.ipynb",
+      "uti": "dyn.ah62d4rv4ge80w6d3r3va"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.gradle",
+      "uti": "dyn.ah62d4rv4ge80s6xbqv0gn"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.cmake",
+      "uti": "dyn.ah62d4rv4ge80g5pbrrwu"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.mk",
+      "uti": "public.make-source"
+    },
+    {
+      "handler": "com.apple.TextEdit",
+      "target": "Dockerfile",
+      "uti": "public.data"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.dockerfile",
+      "uti": "dyn.ah62d4rv4ge80k55drrw1e3xmrvwu"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "target": "a.gitignore",
+      "uti": "dyn.ah62d4rv4ge80s4pyrfx0655wqy"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "pyi",
+      "target": "a.pyi",
+      "uti": "dyn.age81a8pm"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "cjs",
+      "target": "a.cjs",
+      "uti": "dyn.age80g4xx"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "jsx",
+      "target": "a.jsx",
+      "uti": "dyn.age80y652"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "tsx",
+      "target": "a.tsx",
+      "uti": "dyn.age81k652"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "cs",
+      "target": "a.cs",
+      "uti": "dyn.age80g62"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "kt",
+      "target": "a.kt",
+      "uti": "dyn.age8007a"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "kts",
+      "target": "a.kts",
+      "uti": "dyn.age8007dx"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "scala",
+      "target": "a.scala",
+      "uti": "dyn.age81g25brvuu"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "go",
+      "target": "a.go",
+      "uti": "dyn.age80s52"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "rs",
+      "target": "a.rs",
+      "uti": "dyn.age81e62"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "lua",
+      "target": "a.lua",
+      "uti": "dyn.age8027pb"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "dart",
+      "target": "a.dart",
+      "uti": "dyn.age80k2pwsu"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "vb",
+      "target": "a.vb",
+      "uti": "dyn.age81q2u"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "clj",
+      "target": "a.clj",
+      "uti": "dyn.age80g5dn"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "cljs",
+      "target": "a.cljs",
+      "uti": "dyn.age80g5dnsq"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "ml",
+      "target": "a.ml",
+      "uti": "dyn.age8045a"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "mli",
+      "target": "a.mli",
+      "uti": "dyn.age8045dm"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "hs",
+      "target": "a.hs",
+      "uti": "dyn.age80u62"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "erl",
+      "target": "a.erl",
+      "uti": "dyn.age80n6xq"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "hrl",
+      "target": "a.hrl",
+      "uti": "dyn.age80u6xq"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "ex",
+      "target": "a.ex",
+      "uti": "dyn.age80n8a"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "exs",
+      "target": "a.exs",
+      "uti": "dyn.age80n8dx"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "fsx",
+      "target": "a.fsx",
+      "uti": "dyn.age80q652"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "rkt",
+      "target": "a.rkt",
+      "uti": "dyn.age81e45y"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "scm",
+      "target": "a.scm",
+      "uti": "dyn.age81g25r"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "fish",
+      "target": "a.fish",
+      "uti": "dyn.age80q4pxra"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "ps1",
+      "target": "a.ps1",
+      "uti": "dyn.age81a63v"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "bat",
+      "target": "a.bat",
+      "uti": "dyn.age80e2py"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "cmd",
+      "target": "a.cmd",
+      "uti": "dyn.age80g5pe"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "scss",
+      "target": "a.scss",
+      "uti": "dyn.age81g25xsq"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "sass",
+      "target": "a.sass",
+      "uti": "dyn.age81g2pxsq"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "less",
+      "target": "a.less",
+      "uti": "dyn.age8023pxsq"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "styl",
+      "target": "a.styl",
+      "uti": "dyn.age81g7d3ru"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "vue",
+      "target": "a.vue",
+      "uti": "dyn.age81q7pf"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "svelte",
+      "target": "a.svelte",
+      "uti": "dyn.age81g7xfrv4gn"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "astro",
+      "target": "a.astro",
+      "uti": "dyn.age80c65ysm1u"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "rst",
+      "target": "a.rst",
+      "uti": "dyn.age81e65y"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "tex",
+      "target": "a.tex",
+      "uti": "dyn.age81k3p2"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "toml",
+      "target": "a.toml",
+      "uti": "dyn.age81k55rru"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "ini",
+      "target": "a.ini",
+      "uti": "dyn.age80w5xm"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "cfg",
+      "target": "a.cfg",
+      "uti": "dyn.age80g3xh"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "env",
+      "target": "a.env",
+      "uti": "dyn.age80n5x0"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "properties",
+      "target": "a.properties",
+      "uti": "dyn.age81a6xtsbw1e7dmqz3u"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "lock",
+      "target": "a.lock",
+      "uti": "dyn.age80255drq"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "ipynb",
+      "target": "a.ipynb",
+      "uti": "dyn.age80w6d3r3va"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "gradle",
+      "target": "a.gradle",
+      "uti": "dyn.age80s6xbqv0gn"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "cmake",
+      "target": "a.cmake",
+      "uti": "dyn.age80g5pbrrwu"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "tag": "Makefile",
+      "target": "Makefile",
+      "uti": "dyn.age8042ppqzxgw5df"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "Dockerfile",
+      "target": "Dockerfile",
+      "uti": "dyn.age80k55drrw1e3xmrvwu"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "tag": "Containerfile",
+      "target": "Containerfile",
+      "uti": "dyn.age80g55ssvu0w5xfsmxgw5df"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "Gemfile",
+      "target": "Gemfile",
+      "uti": "dyn.age80s3prq3y023k"
+    },
+    {
+      "handler": "dev.zed.Zed",
+      "tag": "gitignore",
+      "target": "a.gitignore",
+      "uti": "dyn.age80s4pyrfx0655wqy"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "tag": "gitconfig",
+      "target": ".gitconfig",
+      "uti": "dyn.age80s4pyqr1063xmq6"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "tag": "gitattributes",
+      "target": ".gitattributes",
+      "uti": "dyn.age80s4pyqf4hk6xmqm41k3px"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "tag": "editorconfig",
+      "target": ".editorconfig",
+      "uti": "dyn.age80n3dmsv11e25tr3xgw32"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "tag": "bashrc",
+      "target": ".bashrc",
+      "uti": "dyn.age80e2pxrb3gg"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "tag": "bash_profile",
+      "target": ".bash_profile",
+      "uti": "dyn.age80e2pxrbt1a6xtq3y023k"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "tag": "bash_login",
+      "target": ".bash_login",
+      "uti": "dyn.age80e2pxrbt0255hrf1a"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "tag": "bash_logout",
+      "target": ".bash_logout",
+      "uti": "dyn.age80e2pxrbt0255hr741k"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "tag": "zshrc",
+      "target": ".zshrc",
+      "uti": "dyn.age81y65ksmvu"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "tag": "zprofile",
+      "target": ".zprofile",
+      "uti": "dyn.age81y6dwr7xgw5df"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "tag": "zshenv",
+      "target": ".zshenv",
+      "uti": "dyn.age81y65kqz1hq"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "tag": "zlogin",
+      "target": ".zlogin",
+      "uti": "dyn.age81y5dtq7y06"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "tag": "zlogout",
+      "target": ".zlogout",
+      "uti": "dyn.age81y5dtq711n7a"
+    },
+    {
+      "handler": "com.microsoft.VSCode",
+      "tag": "profile",
+      "target": ".profile",
+      "uti": "dyn.age81a6xtq3y023k"
+    }
+  ],
+  "tagEntries": {
+    "Containerfile": "",
+    "Dockerfile": "",
+    "Gemfile": "",
+    "Makefile": "",
+    "astro": "",
+    "bash": "",
+    "bash_login": "",
+    "bash_logout": "",
+    "bash_profile": "",
+    "bashrc": "",
+    "bat": "",
+    "c": "",
+    "cc": "",
+    "cfg": "",
+    "cjs": "",
+    "clj": "",
+    "cljs": "",
+    "cmake": "",
+    "cmd": "",
+    "conf": "",
+    "cs": "",
+    "css": "",
+    "csv": "",
+    "dart": "",
+    "editorconfig": "",
+    "env": "",
+    "erl": "",
+    "ex": "",
+    "exs": "",
+    "fish": "",
+    "fsx": "",
+    "gitattributes": "",
+    "gitconfig": "",
+    "gitignore": "",
+    "go": "",
+    "gradle": "",
+    "h": "",
+    "hpp": "",
+    "hrl": "",
+    "hs": "",
+    "html": "",
+    "ini": "",
+    "ipynb": "",
+    "java": "",
+    "js": "",
+    "json": "",
+    "jsx": "",
+    "kt": "",
+    "kts": "",
+    "less": "",
+    "lock": "",
+    "lua": "",
+    "m": "",
+    "md": "com.microsoft.vscode",
+    "mk": "",
+    "ml": "",
+    "mli": "",
+    "mm": "",
+    "php": "",
+    "pl": "",
+    "profile": "",
+    "properties": "",
+    "ps1": "",
+    "py": "",
+    "pyi": "",
+    "r": "",
+    "rb": "",
+    "rkt": "",
+    "rs": "",
+    "rst": "",
+    "sass": "",
+    "scala": "",
+    "scm": "",
+    "scss": "",
+    "sh": "",
+    "sql": "",
+    "styl": "",
+    "svelte": "",
+    "svg": "",
+    "swift": "",
+    "tex": "",
+    "toml": "",
+    "ts": "",
+    "tsx": "",
+    "txt": "",
+    "vb": "",
+    "vue": "",
+    "xhtml": "",
+    "xml": "",
+    "yaml": "",
+    "zlogin": "",
+    "zlogout": "",
+    "zprofile": "",
+    "zsh": "",
+    "zshenv": "",
+    "zshrc": ""
+  },
+  "zed": "dev.zed.Zed"
+}
