@@ -179,7 +179,31 @@ ssh -D 1080 -N -C 用户名@你的VPSIP
 
 ---
 
-### 6. 辅助 Shell 脚本
+### 6. 荷兰超市宣传册下载 (`fetch_supermarket_folders.py`)
+
+下载 AH、Jumbo、Vomar、LIDL、ALDI 五家荷兰超市当期的优惠宣传册（reclamefolder）为 PDF。
+纯标准库 + `curl`，无需登录、无需浏览器。AH 官方不提供 PDF（仅分页图片），脚本用
+ImageMagick 合成；ALDI 与 LIDL 直接取官方 PDF，Jumbo 与 Vomar 取 Publitas 出版物的附件 PDF。
+
+```bash
+# 下载全部五家到 folders/<今天日期>/
+python3 fetch_supermarket_folders.py
+
+# 只下其中几家
+python3 fetch_supermarket_folders.py --only AH LIDL
+
+# 指定输出目录
+python3 fetch_supermarket_folders.py --outdir /tmp/folders
+
+# 离线解析自检（不联网）
+python3 fetch_supermarket_folders.py --selfcheck
+```
+
+选期依据各家的**生效日期**而非发布日期：AH 按宣传册上印的起始周选取（避免误取同日发布的
+促销插页），LIDL 用 offer 日期（其下周宣传册会提前几天上线）。输出目录 `folders/` 已加入
+`.gitignore`。
+
+### 7. 辅助 Shell 脚本
 
 项目中还包含以下用于快速处理媒体文件的 Shell 脚本：
 
@@ -195,4 +219,5 @@ ssh -D 1080 -N -C 用户名@你的VPSIP
 
 ## 文档
 
+- `docs/荷兰超市宣传册下载.md`: 五家荷兰超市宣传册的抓取链路、选期陷阱与产物特征说明（配套 `fetch_supermarket_folders.py`）。
 - `docs/macOS SSH Key 全流程.md`: macOS 上生成/管理 SSH Key、配置 Keychain、安装公钥到服务器的完整流程。
