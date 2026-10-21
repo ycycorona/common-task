@@ -31,3 +31,4 @@ venv/
 # Specific Ignore
 folders/
 .dsh-im/
+dist/
