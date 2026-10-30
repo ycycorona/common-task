@@ -1,3 +1,7 @@
+# Usage (DMM blocks non-JP IPs; SOCKS5 tunnel via a Japan jump host):
+#   ssh -N -C -D 1080 vps_jp
+#   all_proxy=socks5h://127.0.0.1:1080 .venv/bin/python download_dmm_preview.py SSIS-001
+# socks5h (not socks5) so DNS resolves on the remote side too.
 import argparse
 import sys
 import os
