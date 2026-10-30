@@ -1,12 +1,41 @@
-# Usage (DMM blocks non-JP IPs; SOCKS5 tunnel via a Japan jump host):
+# Usage (DMM blocks non-JP IPs; `--via` opens and closes its own SOCKS5 tunnel):
+#   .venv/bin/python download_dmm_preview.py --via vps_jp SSIS-001
+# With a tunnel you already run, or any proxy in all_proxy/https_proxy/http_proxy:
 #   ssh -N -C -D 1080 vps_jp
 #   all_proxy=socks5h://127.0.0.1:1080 .venv/bin/python download_dmm_preview.py SSIS-001
 # socks5h (not socks5) so DNS resolves on the remote side too.
 import argparse
+import socket
+import subprocess
 import sys
 import os
+import time
 import yt_dlp
 from jvav.utils import DmmUtil
+
+
+def find_free_port():
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def start_tunnel(host, port=None, timeout=10.0):
+    """Open a local SOCKS5 port through `ssh -D`; return (process, port)."""
+    port = port or find_free_port()
+    proc = subprocess.Popen(["ssh", "-N", "-C", "-D", f"127.0.0.1:{port}", host])
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if proc.poll() is not None:
+            raise RuntimeError(f"ssh tunnel to {host} exited with code {proc.returncode}")
+        try:
+            socket.create_connection(("127.0.0.1", port), timeout=0.2).close()
+            return proc, port
+        except OSError:
+            time.sleep(0.1)
+    proc.kill()
+    proc.wait()
+    raise RuntimeError(f"ssh tunnel to {host} did not open port {port} within {timeout}s")
 
 def download_video(url, filename, proxy, dmm, threads):
     ydl_opts = {
@@ -42,8 +71,9 @@ def download_video(url, filename, proxy, dmm, threads):
             os.remove(filename)
         return False
 
-def download_dmm_preview(av_id, threads=8):
-    proxy = os.environ.get('all_proxy') or os.environ.get('https_proxy') or os.environ.get('http_proxy') or ''
+def download_dmm_preview(av_id, threads=8, proxy=''):
+    if not proxy:
+        proxy = os.environ.get('all_proxy') or os.environ.get('https_proxy') or os.environ.get('http_proxy') or ''
     
     print(f"[*] Fetching DMM preview URL for: {av_id}")
     dmm = DmmUtil(proxy_addr=proxy)
@@ -82,6 +112,22 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Download DMM preview video using jvav")
     parser.add_argument("av_id", type=str, help="The AV ID (e.g. SSIS-123)")
     parser.add_argument("-t", "--threads", type=int, default=8, help="Number of concurrent fragment downloads (default: 8)")
+    parser.add_argument("--via", metavar="SSH_HOST", help="Open a SOCKS5 tunnel through this SSH host for this run, then close it")
     args = parser.parse_args()
-    
-    download_dmm_preview(args.av_id, args.threads)
+
+    tunnel = None
+    proxy = ''
+    try:
+        if args.via:
+            print(f"[*] Opening SOCKS5 tunnel via {args.via}")
+            tunnel, port = start_tunnel(args.via)
+            proxy = f"socks5h://127.0.0.1:{port}"
+            print(f"[+] Tunnel ready on 127.0.0.1:{port}")
+        success = download_dmm_preview(args.av_id, args.threads, proxy)
+    finally:
+        if tunnel:
+            tunnel.kill()
+            tunnel.wait()
+            print("[*] Tunnel closed")
+
+    sys.exit(0 if success else 1)
