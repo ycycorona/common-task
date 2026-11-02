@@ -38,7 +38,7 @@
 ## Validation and Git
 
 - 只跑与改动面相关的检查：`python3 <对应 test_*.py>`；`devps` 跑 `python3 devps/test_devps.py`。
-- 文档改动检查链接/路径有效与 `git diff --check`。
+- 文档改动检查链接/路径有效与 `git diff --check`；`docs/`、`archives/` 的链接与 `Last Validated` 由 `bash check_docs.sh` 机器校验（自检：`bash test_check_docs.sh`）。
 - 已验证的改动用简洁的 Conventional Commit（`feat(xxx): …` / `fix(xxx): …`），正文列要点。未经授权不 push、不 merge、不改写历史、不动 remote。
 - AI 参与的提交附加真实尾注，无法得知的值写 `unknown`，不猜：
 

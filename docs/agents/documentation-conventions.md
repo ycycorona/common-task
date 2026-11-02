@@ -54,3 +54,5 @@ SPEC、tracker、orchestration 相关规则不适用于本仓库（见 SYNC.md �
 ## 检查
 
 文档改动：链接与路径可达、`git diff --check`，再通读一遍确认没有把测量结论写成约定。
+`bash check_docs.sh` 盯两条能机器判定的：相对链接可达、`docs/` 与 `archives/` 有且只有一行
+`Last Validated`。仍缺元数据的历史文档列在脚本的 `GRANDFATHERED` 里，改过就把它删掉，让它重新受检。
