@@ -221,3 +221,4 @@ python3 archives/fetch_supermarket_folders.py --selfcheck
 
 - `archives/荷兰超市宣传册下载.md`: 五家荷兰超市宣传册的抓取链路、选期陷阱与产物特征说明（配套 `archives/fetch_supermarket_folders.py`）。
 - `docs/macOS SSH Key 全流程.md`: macOS 上生成/管理 SSH Key、配置 Keychain、安装公钥到服务器的完整流程。
+- `docs/MagPie Web 管理界面部署记录.md`: 用 `magpie web` 把 MagPie 桌面 App 搬进浏览器、只从 Tailscale IP 访问的部署现状与运维命令。
