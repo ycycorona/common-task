@@ -12,7 +12,7 @@
 ## Workflow and authorization
 
 - 只实现用户明确要求的范围。验收标准、issue 指派或"就绪"状态本身不授权额外重构、删除或"顺手改进"。
-- 小改动用最小文档：单文件脚本的用法写在脚本头部注释或根 README；不为流程完整性创建没有独立价值的文档。
+- 小改动用最小文档：单文件脚本的用法写在脚本头部注释或根 README；不为流程完整性创建没有独立价值的文档。新建或改动 `docs/`、`archives/` 里的文档时按 [docs/agents/documentation-conventions.md](docs/agents/documentation-conventions.md)（角色、最小元数据、`Last Validated`）。
 - 跨文件或引入新依赖的改动，先在响应里说明取舍再动手。
 
 ## Development principles
@@ -63,3 +63,9 @@
   - **提交**只列 Git 相关动作（提交、push、merge、tag）。本仓库没有 issue tracker，工单信息并入此项。`已提交` 指已落库并用 `git log` / `git status` 复核过；未经授权的动作算 `待授权`；只提议、不自己执行的算 `仅建议`。
   - **下一步**给 2–3 个选项，每项按动作打标签：`[实施]` 会改东西、`[验证]` 检查已完成的工作、`[调查]` 只查不改、`[决策]` 需要用户拍板、`[收尾]` 收手或搁置；必须有且只有一个 `★ 推荐`。需要授权的选项（push、merge、删除、付费调用）结尾加（需授权），并且只能作为选项出现。没有待办时写 `下一步：无需后续`。
   - 收尾必须覆盖：改动文件、运行过的检查命令及结果、提交哈希、遗留问题、有意未提交的文件。
+
+## Playbook sync
+
+- `docs/agents/` 按 `y-agent-toolkit/agent-playbook` 适配而来：意图与不变式来自 playbook，路径、命令与例外是本仓库的真实内容。
+- 适配了什么、丢掉了什么、有哪些例外：见 [docs/agents/SYNC.md](docs/agents/SYNC.md)，其中记录 synced revision。
+- 规则问题或再次同步走 playbook 的 `USAGE.md`；先比对 synced revision 与 playbook `VERSION`，副本过期时先报告，不直接照 playbook 覆盖本仓库规则。

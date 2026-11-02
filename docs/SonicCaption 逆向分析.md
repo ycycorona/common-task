@@ -11,6 +11,8 @@
 | 分析方式 | 反混淆阅读打包产物 + 注入 WebSocket 钩子实测（日语视频 → 中文，127 s 音频） |
 | 分析日期 | 2026-10-26 |
 
+Last Validated: Not yet validated
+
 ---
 
 ## 1. 结论摘要
