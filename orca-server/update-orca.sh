@@ -81,6 +81,40 @@ if [[ ! -d "${ORCA_DIR}" ]]; then
   error "Orca 安装目录不存在: ${ORCA_DIR}"
 fi
 
+restart_orca() {
+  warn "正在重启 Orca 守护进程..."
+
+  pkill -f "out/cli/index.js serve" 2>/dev/null || true
+  pkill -f "orcad-server.js" 2>/dev/null || true
+  sleep 2
+
+  mkdir -p "$(dirname "${CONFIG_LOG_FILE}")"
+
+  info "启动新版 Orca 守护服务..."
+  nohup "${CURRENT_SQUASHFS}/orca-ide" \
+    "${CURRENT_SQUASHFS}/resources/app.asar.unpacked/out/cli/index.js" \
+    serve --port "${PORT}" --pairing-address "${PAIRING_IP}" \
+    > "${CONFIG_LOG_FILE}" 2>&1 &
+
+  info "等待服务就绪校验..."
+  SUCCESS=false
+  for i in {1..15}; do
+    if curl -s -I "http://127.0.0.1:${PORT}/web-index.html" | grep -q "200 OK"; then
+      SUCCESS=true
+      break
+    fi
+    sleep 1
+  done
+
+  if [[ "${SUCCESS}" == "true" ]]; then
+    success "Orca 服务已成功重启并就绪！(端口: ${PORT})"
+    NEW_PID=$(pgrep -f "out/cli/index.js serve" | head -n 1 || echo "未知")
+    info "当前服务 PID: ${NEW_PID}"
+  else
+    warn "服务未在预期时间内响应 200 OK，请检查日志: ${CONFIG_LOG_FILE}"
+  fi
+}
+
 cd "${ORCA_DIR}"
 
 # 1. 检查当前安装版本
@@ -109,7 +143,12 @@ CLEAN_TARGET_VER="${TARGET_VERSION#v}"
 info "目标版本: ${TARGET_VERSION} (版本号: ${CLEAN_TARGET_VER})"
 
 if [[ "${LOCAL_VERSION}" == "${CLEAN_TARGET_VER}" && "${FORCE}" != "true" ]]; then
-  success "当前版本已是最新 (${LOCAL_VERSION})，无需更新。如需强制重装请添加 --force 参数。"
+  success "当前版本已是最新 (${LOCAL_VERSION})，无需更新。"
+  if [[ "${RESTART}" == "true" ]]; then
+    restart_orca
+  else
+    info "如需强制重装请添加 --force 参数；如需重启服务请添加 --restart 参数。"
+  fi
   exit 0
 fi
 
@@ -155,6 +194,10 @@ if [[ -d "${CURRENT_SQUASHFS}" ]]; then
 fi
 
 mv "${EXTRACTED_CONTENT}" "${CURRENT_SQUASHFS}"
+
+# Electron 的 SUID sandbox 必须 root:root 4755；普通用户解包会丢 setuid，启动即 FATAL。
+sudo chown root:root "${CURRENT_SQUASHFS}/chrome-sandbox"
+sudo chmod 4755 "${CURRENT_SQUASHFS}/chrome-sandbox"
 rm -rf "${TMP_EXTRACT_DIR}"
 mv "${TMP_APPIMAGE}" "${ORCA_DIR}/${APPIMAGE_NAME}"
 
@@ -162,37 +205,7 @@ success "文件更新完成！新版本已就绪。"
 
 # 7. 重启服务处理
 if [[ "${RESTART}" == "true" ]]; then
-  warn "正在重启 Orca 守护进程..."
-  
-  pkill -f "out/cli/index.js serve" 2>/dev/null || true
-  pkill -f "orcad-server.js" 2>/dev/null || true
-  sleep 2
-
-  mkdir -p "$(dirname "${CONFIG_LOG_FILE}")"
-  
-  info "启动新版 Orca 守护服务..."
-  nohup "${CURRENT_SQUASHFS}/orca-ide" \
-    "${CURRENT_SQUASHFS}/resources/app.asar.unpacked/out/cli/index.js" \
-    serve --port "${PORT}" --pairing-address "${PAIRING_IP}" \
-    > "${CONFIG_LOG_FILE}" 2>&1 &
-
-  info "等待服务就绪校验..."
-  SUCCESS=false
-  for i in {1..15}; do
-    if curl -s -I "http://127.0.0.1:${PORT}/web-index.html" | grep -q "200 OK"; then
-      SUCCESS=true
-      break
-    fi
-    sleep 1
-  done
-
-  if [[ "${SUCCESS}" == "true" ]]; then
-    success "Orca 服务已成功重启并就绪！(端口: ${PORT})"
-    NEW_PID=$(pgrep -f "out/cli/index.js serve" | head -n 1 || echo "未知")
-    info "当前服务 PID: ${NEW_PID}"
-  else
-    warn "服务未在预期时间内响应 200 OK，请检查日志: ${CONFIG_LOG_FILE}"
-  fi
+  restart_orca
 else
   echo ""
   echo -e "${YELLOW}================================================================${NC}"
