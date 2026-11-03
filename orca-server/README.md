@@ -2,6 +2,8 @@
 
 用于在 Linux ARM64（如 Free-Arm 服务器）上平滑升级与维护 [stablyai/orca](https://github.com/stablyai/orca) 无头服务端（Headless Serve）。
 
+> Windows 桌面版（NSIS 安装、`Orca.exe`）用另一份脚本：[../orca-windows/README.md](../orca-windows/README.md)。两者的产物、校验方式与重启对象都不同，不要混用。
+
 ## 背景与问题
 
 - **为什么网页端显示“手动更新”无法点击**：Linux 无头环境（`orca serve` / `orcad`）托管了后台 PTY 会话与多智能体任务，官方为避免误中断，将远程自动热重载限制为 `unsupported-headless-serve`。

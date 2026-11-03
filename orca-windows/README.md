@@ -2,6 +2,8 @@
 
 [`orca-server/update-orca.sh`](../orca-server/update-orca.sh) 的 Windows 对应版本。原脚本面向 **Linux ARM64 无头服务端**（AppImage 解包 + `orca serve` 重启）；Windows 上跑的是 **桌面版 Orca**（NSIS 按用户安装到 `%LOCALAPPDATA%\Programs\orca`，无需管理员权限），因此更新链路完全不同：
 
+> 反向参考：Linux ARM64 无头服务端见 [../orca-server/README.md](../orca-server/README.md)。
+
 | 环节 | Linux 原脚本 | 本 Windows 脚本 |
 | :--- | :--- | :--- |
 | 产物 | `orca-linux-arm64.AppImage` | `orca-windows-setup.exe`（NSIS） |
