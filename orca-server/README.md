@@ -27,7 +27,7 @@
 ./update-orca.sh --restart
 ```
 
-> 请从 SSH 会话执行 `--restart`，不要在 Orca 内置终端里跑：重启会杀掉 Orca runtime，连同承载脚本的终端一起中断。
+> 请从 SSH 会话执行 `--restart`，不要在 Orca 内置终端里跑：重启会杀掉 Orca runtime，连同承载脚本的终端一起中断，启动新进程的命令根本执行不到。脚本会通过 `ORCA_PANE_KEY` 与祖先进程检测识别这种情况，直接报错退出（非零）而不是半途自杀。
 
 ### 3. 强制重装当前版本 / 指定版本更新
 ```bash

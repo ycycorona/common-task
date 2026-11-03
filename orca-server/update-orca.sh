@@ -33,6 +33,9 @@ RESTART=false
 TARGET_VERSION=""
 
 while [[ $# -gt 0 ]]; do
+  if [[ "$1" =~ ^(-v|--version|-d|--dir|--ip|-p|--port)$ && $# -lt 2 ]]; then
+    error "参数 $1 缺少取值"
+  fi
   case "$1" in
     --force|-f)
       FORCE=true
@@ -81,7 +84,25 @@ if [[ ! -d "${ORCA_DIR}" ]]; then
   error "Orca 安装目录不存在: ${ORCA_DIR}"
 fi
 
+# 脚本是否跑在 Orca 里：内置终端会注入 ORCA_PANE_KEY；automation/agent 派生的进程靠祖先链识别。
+running_inside_orca() {
+  [[ -n "${ORCA_PANE_KEY-}" ]] && return 0
+  local p=${PPID}
+  while [[ ${p} -gt 1 ]]; do
+    if ps -o args= -p "${p}" 2>/dev/null | grep -qE 'orcad-server\.js|orca-ide|out/cli/index\.js serve'; then
+      return 0
+    fi
+    p=$(ps -o ppid= -p "${p}" 2>/dev/null | tr -d ' ' || true)
+    [[ -z ${p} ]] && return 1
+  done
+  return 1
+}
+
 restart_orca() {
+  if running_inside_orca; then
+    error "检测到脚本跑在 Orca 里（内置终端或 Orca 派生的进程）：pkill 会先杀掉脚本自己，启动新进程那步永远执行不到。请从 SSH 会话运行。"
+  fi
+
   warn "正在重启 Orca 守护进程..."
 
   pkill -f "out/cli/index.js serve" 2>/dev/null || true
@@ -111,7 +132,7 @@ restart_orca() {
     NEW_PID=$(pgrep -f "out/cli/index.js serve" | head -n 1 || echo "未知")
     info "当前服务 PID: ${NEW_PID}"
   else
-    warn "服务未在预期时间内响应 200 OK，请检查日志: ${CONFIG_LOG_FILE}"
+    error "服务未在 15s 内响应 200 OK，请检查日志: ${CONFIG_LOG_FILE}"
   fi
 }
 
@@ -185,6 +206,12 @@ if [[ ! -f "${EXTRACTED_CONTENT}/orca-ide" ]]; then
 fi
 
 # 6. 原子切换目录与可执行文件
+# Electron 的 SUID sandbox 必须 root:root 4755；普通用户解包会丢 setuid，启动即 FATAL。
+# 必须在切换前对解包目录做，sudo 失败时旧版本原封不动，不会留下跑不起来的新目录。
+info "重设 chrome-sandbox 权限..."
+sudo chown root:root "${EXTRACTED_CONTENT}/chrome-sandbox"
+sudo chmod 4755 "${EXTRACTED_CONTENT}/chrome-sandbox"
+
 info "替换旧版本核心文件..."
 BACKUP_DIR="${ORCA_DIR}/squashfs-root.bak"
 rm -rf "${BACKUP_DIR}"
@@ -194,10 +221,6 @@ if [[ -d "${CURRENT_SQUASHFS}" ]]; then
 fi
 
 mv "${EXTRACTED_CONTENT}" "${CURRENT_SQUASHFS}"
-
-# Electron 的 SUID sandbox 必须 root:root 4755；普通用户解包会丢 setuid，启动即 FATAL。
-sudo chown root:root "${CURRENT_SQUASHFS}/chrome-sandbox"
-sudo chmod 4755 "${CURRENT_SQUASHFS}/chrome-sandbox"
 rm -rf "${TMP_EXTRACT_DIR}"
 mv "${TMP_APPIMAGE}" "${ORCA_DIR}/${APPIMAGE_NAME}"
 
