@@ -3,10 +3,10 @@ set -uo pipefail
 
 # 检查文档规范里能机器判定的两条：相对链接可达、docs/ 与 archives/ 的文档有且只有一行
 # Last Validated（docs/agents/documentation-conventions.md）。
-# 用法: ./check_docs.sh [仓库根目录]
+# 用法: ./devtools/check_docs.sh [仓库根目录]
 # 只报告不判失败的例外写在 GRANDFATHERED：改过对应文档后就把它删掉，让它重新受检。
 
-root=${1:-$(cd "$(dirname "$0")" && pwd)}
+root=${1:-$(cd "$(dirname "$0")/.." && pwd)}
 fail=0
 
 GRANDFATHERED=(

@@ -2,7 +2,7 @@
 set -uo pipefail
 
 # check_docs.sh 的自检：在临时目录里造正反两套文档，覆盖链接、Last Validated 与例外清单。
-# 用法: bash test_check_docs.sh
+# 用法: bash devtools/test_check_docs.sh
 
 here=$(cd "$(dirname "$0")" && pwd)
 script="$here/check_docs.sh"

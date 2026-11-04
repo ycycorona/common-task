@@ -2,7 +2,7 @@
 
 > 状态：草案，待评审。本文档对应《开发需求整理》首版（MVP）范围，暂不进入代码实现。
 > 平台：macOS（13+）；运行时：Python 3.11+ + psutil。
-> 演进起点：现有原型 `dev-process-audit.sh`（PPID=1 + CWD 过滤），MVP 将其泛化并补齐安全判断。
+> 演进起点：现有原型 `dev-process-audit.sh`（PPID=1 + CWD 过滤，2026-11 已删除，能力并入 devps），MVP 将其泛化并补齐安全判断。
 
 ---
 

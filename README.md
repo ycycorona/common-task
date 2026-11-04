@@ -25,9 +25,27 @@ cd common-task
 pip install -r requirements.txt
 ```
 
+## 目录结构
+
+| 目录 | 内容 |
+| --- | --- |
+| `media/` | 音视频与图片处理（ffmpeg / sips），含 `media/tests/mocks` 假二进制 |
+| `download/` | 下载类：DMM 预览、Hugging Face 快照 |
+| `organize/` | 文件名整理与文本统计（JAV 重命名、SRT 字数） |
+| `tools/` | 小工具：Codex 通知钩子、远程目录同步 |
+| `devtools/` | 仓库自身的文档校验（`check_docs.sh` + 自检） |
+| `devps/` | 孤儿开发进程检测/停止（macOS，零依赖） |
+| `ai-compact/` | AI Agent 自动压缩阈值的探测与设置 |
+| `archives/` | 一次性/归档任务（荷兰超市宣传册等） |
+| `orca-server/`、`orca-windows/` | Orca 无头服务端的更新维护（Linux / Windows） |
+| `zed-defaults/` | macOS 默认程序切到 Zed |
+| `scratch/` | 踩点用的临时脚本，不算测试，不保证可跑 |
+
+根目录只留 `README.md`、`AGENTS.md`、`requirements.txt` 与各子目录。
+
 ## 脚本列表
 
-### 1. JAV 整理工具 (`jav_renamer.py`)
+### 1. JAV 整理工具 (`organize/jav_renamer.py`)
 
 一个自动化的 JAV 文件整理工具，能够识别视频、音频及字幕文件中的番号，自动获取元数据并重命名。
 
@@ -52,16 +70,16 @@ pip install -r requirements.txt
 **使用方法:**
 ```bash
 # 预览模式 (默认) - 仅显示会做什么，不实际修改
-python jav_renamer.py /path/to/videos
+python organize/jav_renamer.py /path/to/videos
 
 # 执行模式 - 实际重命名文件
-python jav_renamer.py /path/to/videos --execute
+python organize/jav_renamer.py /path/to/videos --execute
 ```
 
 
 ---
 
-### 2. Hugging Face 仓库下载工具 (`hf_snapshot_download.py`)
+### 2. Hugging Face 仓库下载工具 (`download/hf_snapshot_download.py`)
 
 基于 `huggingface_hub.snapshot_download()` 的命令行工具，用于快速下载 Hugging Face 上的模型、数据集或 Space。
 
@@ -80,29 +98,29 @@ python jav_renamer.py /path/to/videos --execute
 **使用方法:**
 ```bash
 # 基本用法 - 下载完整模型
-python3 hf_snapshot_download.py kotoba-tech/kotoba-whisper-v2.0-faster
+python3 download/hf_snapshot_download.py kotoba-tech/kotoba-whisper-v2.0-faster
 
 # 推荐用法 - 不使用符号链接 + 断点续传
-python3 hf_snapshot_download.py kotoba-tech/kotoba-whisper-v2.0-faster \
+python3 download/hf_snapshot_download.py kotoba-tech/kotoba-whisper-v2.0-faster \
   -o ./kotoba-whisper --repo-type model --no-symlinks --resume
 
 # 只下载部分文件（如模型权重和配置）
-python3 hf_snapshot_download.py kotoba-tech/kotoba-whisper-v2.0-faster \
+python3 download/hf_snapshot_download.py kotoba-tech/kotoba-whisper-v2.0-faster \
   -o ./kotoba --no-symlinks --resume \
   --include "*.bin" "*.json"
 
 # 下载数据集
-python3 hf_snapshot_download.py username/dataset-name \
+python3 download/hf_snapshot_download.py username/dataset-name \
   --repo-type dataset -o ./my-dataset
 
 # 使用 token 下载私有仓库
-python3 hf_snapshot_download.py private-org/private-model \
+python3 download/hf_snapshot_download.py private-org/private-model \
   --token hf_xxxxxxxxxxxx --no-symlinks
 ```
 
 ---
 
-### 3. 音频静音替换工具 (`replace_audio_silence.py`)
+### 3. 音频静音替换工具 (`media/replace_audio_silence.py`)
 
 
 用于批量替换 MP4 视频文件中的音频轨道为静音轨道的工具。这在需要去除原始音频但保持视频结构或为了特定播放设备兼容性时非常有用。
@@ -120,18 +138,18 @@ python3 hf_snapshot_download.py private-org/private-model \
 **使用方法:**
 ```bash
 # 基本用法
-python replace_audio_silence.py /input/dir /output/dir
+python media/replace_audio_silence.py /input/dir /output/dir
 
 # 递归处理所有子文件夹
-python replace_audio_silence.py /input/dir /output/dir --recursive
+python media/replace_audio_silence.py /input/dir /output/dir --recursive
 
 # 预览模式
-python replace_audio_silence.py /input/dir /output/dir --dry-run
+python media/replace_audio_silence.py /input/dir /output/dir --dry-run
 ```
 
 ---
 
-### 4. Codex 通知工具 (`codex_notify.py`)
+### 4. Codex 通知工具 (`tools/codex_notify.py`)
 
 一个简单的脚本，用于发送桌面通知。主要被其他脚本（如 `jav_renamer.py`）调用，用于在长时间运行的任务结束时提醒用户。
 
@@ -146,12 +164,12 @@ python replace_audio_silence.py /input/dir /output/dir --dry-run
 **使用方法:**
 通常不单独使用，而是由其他脚本调用。如果需要手动测试：
 ```bash
-python codex_notify.py '{"type": "agent-turn-complete", "last-assistant-message": "任务已完成"}'
+python tools/codex_notify.py '{"type": "agent-turn-complete", "last-assistant-message": "任务已完成"}'
 ```
 
 ---
 
-### 5. DMM 预览视频下载工具 (`download_dmm_preview.py`)
+### 5. DMM 预览视频下载工具 (`download/download_dmm_preview.py`)
 
 一个用于获取并下载 DMM (FANZA) 高清预览视频流媒体（m3u8 解析合并）的 Python 脚本。
 
@@ -170,7 +188,7 @@ python codex_notify.py '{"type": "agent-turn-complete", "last-assistant-message"
 
 ```bash
 # 假设您的本地代理端绑定在 127.0.0.1:1080 端口，且已切换成日本节点：
-all_proxy=socks5h://127.0.0.1:1080 python download_dmm_preview.py SSIS-001
+all_proxy=socks5h://127.0.0.1:1080 python download/download_dmm_preview.py SSIS-001
 
 # SSH 动态代理，把本地 1080 端口转成代理端口。
 # 命令：
@@ -203,17 +221,21 @@ python3 archives/fetch_supermarket_folders.py --selfcheck
 促销插页），LIDL 用 offer 日期（其下周宣传册会提前几天上线）。输出目录 `folders/` 已加入
 `.gitignore`。
 
-### 7. 辅助 Shell 脚本
+### 7. 音视频 Shell 脚本（`media/`）
 
 项目中还包含以下用于快速处理媒体文件的 Shell 脚本：
 
--   **`heic_batch_convert.sh`**: 批量将 HEIC 图片转换为 JPEG 或 PNG 格式。
--   **`video2aac.sh`**: 批量从视频中提取音频并转换为 AAC 格式（256k 码率）。支持单个文件或递归处理整个目录，自动识别常见视频格式（mp4/mkv/mov/avi/flv/webm/m4v/wmv），跳过已存在的 AAC 文件避免重复转换。
--   **`video2flac.sh` / `video2opus.sh`**: 快速从视频中提取音频并转换为高压缩率的 FLAC 或 Opus 格式（适配 OpenAI Whisper 或其他 AI 音频转录工具）。`video2opus.sh` 会跳过隐藏文件/目录。
--   **`video_clip_to_wav.sh`**: 从视频中按指定的起止时间极速截取片段，并提取其音频。音频输出支持格式为 Whisper 友好的 WAV (16kHz 单声道 PCM) 或高质量 VBR 的 MP3。支持自动识别省略参数以输出至原目录。
--   **`video_split_to_flac.sh`**: 将长视频或音频文件按指定时长切分（默认 10 分钟），并自动将切分后的分段音频转换为 FLAC（默认）或 MP3 格式。
--   **`extract_mp3.sh`**: 从视频文件中提取音频并转换为 MP3 格式。支持传入多个文件顺序处理，自动根据输入文件名生成 `.mp3` 输出。支持丰富的参数自定义（码率、采样率、声道、音频流选择、起止时间截取等）。自动检测输入音频是否为 MP3，若是则直接复制音轨避免重复编码。运行时显示当前处理进度（`[N/TOTAL | PERCENT%]`），并自动过滤 ffmpeg 正常日志仅保留警告和报错，最后输出处理统计（成功/失败/总数）。单个文件失败不会中断后续任务。
--   **`run_whisper_screen.sh`**: VideoCaptioner 转录任务管理器。使用 screen 在后台运行转录任务，固定复用单一 session 和 window，支持任务检测、避免重复启动和 Attached 状态保护。
+-   **`media/heic_batch_convert.sh`**: 批量将 HEIC 图片转换为 JPEG 或 PNG 格式。
+-   **`media/video2aac.sh`**: 批量从视频中提取音频并转换为 AAC 格式（256k 码率）。支持单个文件或递归处理整个目录，自动识别常见视频格式（mp4/mkv/mov/avi/flv/webm/m4v/wmv），跳过已存在的 AAC 文件避免重复转换。
+-   **`media/video2flac.sh` / `media/video2opus.sh`**: 快速从视频中提取音频并转换为高压缩率的 FLAC 或 Opus 格式（适配 OpenAI Whisper 或其他 AI 音频转录工具）。`video2opus.sh` 会跳过隐藏文件/目录。
+-   **`media/video_clip_to_wav.sh`**: 从视频中按指定的起止时间极速截取片段，并提取其音频。音频输出支持格式为 Whisper 友好的 WAV (16kHz 单声道 PCM) 或高质量 VBR 的 MP3。支持自动识别省略参数以输出至原目录。
+-   **`media/video_split_to_flac.sh`**: 将长视频或音频文件按指定时长切分（默认 10 分钟），并自动将切分后的分段音频转换为 FLAC（默认）或 MP3 格式。
+-   **`media/extract_mp3.sh`**: 从视频文件中提取音频并转换为 MP3 格式。支持传入多个文件顺序处理，自动根据输入文件名生成 `.mp3` 输出。支持丰富的参数自定义（码率、采样率、声道、音频流选择、起止时间截取等）。自动检测输入音频是否为 MP3，若是则直接复制音轨避免重复编码。运行时显示当前处理进度（`[N/TOTAL | PERCENT%]`），并自动过滤 ffmpeg 正常日志仅保留警告和报错，最后输出处理统计（成功/失败/总数）。单个文件失败不会中断后续任务。
+-   **`media/run_whisper_screen.sh`**: VideoCaptioner 转录任务管理器。使用 screen 在后台运行转录任务，固定复用单一 session 和 window，支持任务检测、避免重复启动和 Attached 状态保护。
+
+补充：`media/mp3_duration_ms.sh` 用 ffprobe 输出毫秒时长（给其它脚本调用）；
+`tools/remote-dir-sync.sh` 从远程主机干净覆盖拉取一个目录（自检 `tools/test_remote_dir_sync.sh`）；
+`organize/count_chars.py` 统计 SRT/文本字数（跳过时间轴行）。
 
 ### 8. AI Agent 自动压缩阈值 (`ai-compact/ai_compact.py`)
 
@@ -243,6 +265,19 @@ python3 ai-compact/ai_compact.py verify -a codex --expect 300000
 
 `set` 会先落盘再进验证：回读配置比对阈值，并调用 Agent 自带的解析器
 （codex 用 `codex doctor`，opencode 用 `opencode debug config`）确认配置真被认；不一致时退出码 1。
+
+
+### 9. 运维与子系统
+
+-   **`devps/devps.py`**：找出"启动者已退出"（孤儿）的开发进程并按需停止。macOS 专用、仅标准库；
+    `devps [--all] [--port N] [--json]` 列进程，`devps stop PID@STARTED [--force --yes]` 停进程
+    （必须带启动时间，防 PID 复用误杀）。设计见 `devps/docs/design-v0.2.md`，自检 `python3 devps/test_devps.py`。
+-   **`devtools/check_docs.sh`**：校验 `docs/`、`archives/` 的相对链接可达与 `Last Validated` 唯一性；
+    自检 `bash devtools/test_check_docs.sh`。
+-   **`orca-server/update-orca.sh`**、**`orca-windows/update-orca.cmd`**：Orca 无头服务端的平滑更新
+    （Linux ARM64 / Windows），说明见各自目录的 README。
+-   **`zed-defaults/zeddefaults.swift`**：把 macOS 默认程序从 VS Code 换成 Zed，
+    `zeddefaults selftest|snapshot|apply|revert|list`，说明见 `zed-defaults/README.md`。
 
 
 ---
