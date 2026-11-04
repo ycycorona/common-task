@@ -1,3 +1,17 @@
+# Python 依赖（pip install -r requirements.txt）
+# 脚本按需分目录使用，不是所有脚本都要装全。
+
+# organize/jav_renamer.py、download/download_dmm_preview.py
 jvav
+
+# download/hf_snapshot_download.py
 huggingface_hub
+
+# download/download_dmm_preview.py、scratch/test_dlp.py
 yt-dlp
+
+# 自检与踩点脚本（跑测试才需要）
+# media/test_extract_mp3.py
+pytest
+# scratch/test_dl.py
+requests

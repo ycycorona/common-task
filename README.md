@@ -4,18 +4,21 @@
 
 ## 系统要求 (System Requirements)
 
-本项目脚本主要在 macOS 环境下开发，部分功能依赖以下系统级命令行工具：
+本项目脚本主要在 macOS 环境下开发。系统级命令按用途分布如下，缺哪个只影响对应目录的脚本：
 
-1.  **FFmpeg**: 用于所有音视频处理（音频提取、静音替换、格式转换）。
-    ```bash
-    brew install ffmpeg
-    ```
-2.  **terminal-notifier**: 用于在脚本任务完成后发送 macOS 桌面通知。
-    ```bash
-    brew install terminal-notifier
-    ```
-3.  **sips**: macOS 系统的脚本化图像处理系统，用于 HEIC 到 JPEG 的批量转换（macOS 自带）。
-4.  **SetFile**: macOS 命令行工具，用于修改和保留文件的创建日期（通常随 Xcode Command Line Tools 安装）。
+| 命令 | 用于 | 安装 |
+| --- | --- | --- |
+| `ffmpeg` | `media/` 全部音视频脚本（含 `ffprobe`，`mp3_duration_ms.sh` 直接调它） | `brew install ffmpeg` |
+| `terminal-notifier` | `tools/codex_notify.py`、`organize/jav_renamer.py` 的任务完成通知 | `brew install terminal-notifier` |
+| `sips` | `media/heic_batch_convert.sh` 的 HEIC 转换 | macOS 自带 |
+| `SetFile` | `media/replace_audio_silence.py` 保留创建时间 | Xcode Command Line Tools |
+| `ssh` | `download/download_dmm_preview.py --via`、`tools/remote-dir-sync.sh` | macOS 自带 |
+| `screen` | `media/run_whisper_screen.sh`（远端转录任务） | macOS 自带 |
+| `ps`、`lsof` | `devps/devps.py` 的进程与 cwd 探测 | macOS 自带 |
+| `swiftc` | `zed-defaults/` 编译 | Xcode Command Line Tools |
+
+Python 依赖见 [`requirements.txt`](requirements.txt)：`jvav`、`huggingface_hub`、`yt-dlp` 是运行依赖，
+`pytest`、`requests` 只有跑自检或 `scratch/` 踩点脚本时才需要。
 
 ## 安装方式
 
