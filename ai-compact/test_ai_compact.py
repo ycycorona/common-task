@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Self-checks for ai_compact.py. Run: python3 test_ai_compact.py"""
+"""Self-checks for ai_compact.py. Run: python3 ai-compact/test_ai_compact.py"""
 
 import json
 import sys
@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-import ai_compact as ac
+import ai_compact as ac  # pyright: ignore[reportImplicitRelativeImport]
 
 FAILS = []
 
@@ -121,16 +121,18 @@ def test_codex_set_and_read():
     text = config.read_text()
     assert "model_auto_compact_token_limit = 200000" in text
     assert "# keep this comment" in text
-    assert ac.resolve(adapter, None).threshold == 200000
+    setting = ac.resolve(adapter, None)
+    assert setting is not None and setting.threshold == 200000
     ok, lines = ac._check_one(adapter, None, 200000, None, native=False)
     assert ok, lines
-    for bad in ({"model": "x"}, {"enabled": True}):
+    rejected: list[tuple[str | None, bool | None]] = [("x", None), (None, True)]
+    for model_arg, enabled_arg in rejected:
         try:
-            adapter.apply(None, bad.get("model"), bad.get("enabled"), None)
+            adapter.apply(None, model_arg, enabled_arg, None)
         except SystemExit:
             pass
         else:
-            raise AssertionError(f"expected SystemExit for {bad}")
+            raise AssertionError(f"expected SystemExit for model={model_arg} enabled={enabled_arg}")
 
 
 def test_pi_roundtrip_with_context_lookup():

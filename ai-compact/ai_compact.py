@@ -12,15 +12,17 @@ Each agent exposes a different native knob, so writes convert:
   opencode      compaction.buffer              = context - threshold
   cursor-agent  no auto-compaction knob (read-only report)
 
+Run from the repo root:
+
 Usage:
-  python3 ai_compact.py scan                     # probe all agents
-  python3 ai_compact.py scan --json
-  python3 ai_compact.py set 200000               # every agent
-  python3 ai_compact.py set 200000 -a pi         # one agent
-  python3 ai_compact.py set 200000 -a pi -m magpie/auto/gpt-6.1-sol
-  python3 ai_compact.py set --disable -a claude  # toggle auto-compaction off
-  python3 ai_compact.py verify -a codex --expect 200000
-  python3 ai_compact.py scan --no-native-check   # skip calling the agents' own parsers
+  python3 ai-compact/ai_compact.py scan                     # probe all agents
+  python3 ai-compact/ai_compact.py scan --json
+  python3 ai-compact/ai_compact.py set 200000               # every agent
+  python3 ai-compact/ai_compact.py set 200000 -a pi         # one agent
+  python3 ai-compact/ai_compact.py set 200000 -a pi -m magpie/auto/gpt-6.1-sol
+  python3 ai-compact/ai_compact.py set --disable -a claude  # toggle auto-compaction off
+  python3 ai-compact/ai_compact.py verify -a codex --expect 200000
+  python3 ai-compact/ai_compact.py scan --no-native-check   # skip calling the agents' own parsers
 
 `set` writes, then verifies (re-read + the agent's own config parser) and exits 1 on mismatch.
 """
