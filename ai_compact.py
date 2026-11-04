@@ -28,6 +28,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import os
 import re
@@ -242,7 +243,7 @@ class Adapter:
 
     # -- write
     def apply(self, threshold: int | None, model: str | None, enabled: bool | None,
-              context: int | None) -> list[str]:
+              context: int | None, unset: bool = False) -> list[str]:
         raise NotImplementedError
 
     # -- native parser check
@@ -303,7 +304,9 @@ class Claude(Adapter):
             ))
         return out
 
-    def apply(self, threshold, model, enabled, context):
+    def apply(self, threshold, model, enabled, context, unset=False):
+        if unset:
+            raise SystemExit("claude: 暂不支持 --unset（如需删除模型级条目请手工编辑 modelSettings）")
         if enabled is False:
             return self._set(enabled=False, model=None, threshold=None)
         if threshold is not None and not self.WINDOW_MIN <= threshold <= self.WINDOW_MAX:
@@ -371,7 +374,9 @@ class Codex(Adapter):
             note="无开关字段；未设置时用该模型的内置默认。模型级不支持（profile 内同名字段会被忽略）",
         )]
 
-    def apply(self, threshold, model, enabled, context):
+    def apply(self, threshold, model, enabled, context, unset=False):
+        if unset:
+            raise SystemExit("codex: 暂不支持 --unset")
         if enabled is not None:
             raise SystemExit("codex: 没有启用/禁用开关，只能设置阈值（--threshold）或删除该键")
         if model:
@@ -432,7 +437,11 @@ class Pi(Adapter):
                 data = json.loads(path.read_text())
             except json.JSONDecodeError:
                 continue
-            for prov, info in data.get("providers", {}).items():
+            catalogs = data.get("providers", {})
+            # models-store.json keeps providers at the top level
+            catalogs = {**catalogs, **{k: v for k, v in data.items()
+                                       if isinstance(v, dict) and "models" in v}}
+            for prov, info in catalogs.items():
                 for entry in info.get("models", []):
                     if provider and prov != provider:
                         continue
@@ -472,11 +481,25 @@ class Pi(Adapter):
             ))
         return out
 
-    def apply(self, threshold, model, enabled, context):
+    def apply(self, threshold, model, enabled, context, unset=False):
         path = self.config_path()
         data = self._data()
         compaction = data.setdefault("compaction", {})
         changes = []
+        if unset:
+            if not model:
+                raise SystemExit("pi: --unset 需要 --model 指定要删的模型级条目（支持 * 通配）")
+            overrides = compaction.get("modelOverrides") or {}
+            hits = [key for key in overrides if fnmatch.fnmatch(key, model)]
+            if not hits:
+                raise SystemExit(f"pi: compaction.modelOverrides 里没有匹配 {model} 的条目")
+            for key in hits:
+                del overrides[key]
+                changes.append(f"删除 compaction.modelOverrides.{key}")
+            if not overrides:
+                compaction.pop("modelOverrides", None)
+            atomic_write(path, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+            return changes
         if enabled is not None:
             old = compaction.get("enabled")
             compaction["enabled"] = enabled
@@ -560,7 +583,9 @@ class OpenCode(Adapter):
             note=note,
         )]
 
-    def apply(self, threshold, model, enabled, context):
+    def apply(self, threshold, model, enabled, context, unset=False):
+        if unset:
+            raise SystemExit("opencode: 暂不支持 --unset")
         if model:
             raise SystemExit("opencode: 不支持模型级压缩设置（compaction 只有全局配置）")
         path = self.config_path()
@@ -645,7 +670,7 @@ class CursorAgent(Adapter):
             note="未暴露自动压缩开关/阈值，本脚本只能探测不能写入",
         )]
 
-    def apply(self, threshold, model, enabled, context):
+    def apply(self, threshold, model, enabled, context, unset=False):
         raise SystemExit("cursor-agent: 没有自动压缩开关或阈值可写")
 
 
@@ -724,7 +749,7 @@ def cmd_set(args) -> int:
             print(f"-- {name}: 该 Agent 无启用/禁用开关，跳过")
             continue
         try:
-            changes = adapter.apply(args.threshold, args.model, enabled, args.context)
+            changes = adapter.apply(args.threshold, args.model, enabled, args.context, args.unset)
         except SystemExit as exc:
             print(f"-- {name}: {exc}")
             failed = True
@@ -735,10 +760,35 @@ def cmd_set(args) -> int:
     if failed:
         print("\n有 Agent 未写入，见上面的提示。", file=sys.stderr)
         return 1
+    if args.unset:
+        print()
+        return _verify_unset(names, args.model)
     print()
     return cmd_verify(argparse.Namespace(agent=args.agent, model=args.model, expect=args.threshold,
                                         native=not args.no_native_check, enabled=enabled,
                                         context=args.context))
+
+
+def _verify_unset(names: list[str], pattern: str) -> int:
+    adapters = registry()
+    leftover = []
+    for name in names:
+        adapter = adapters.get(name)
+        if adapter is None or not adapter.installed():
+            continue
+        remaining = [s.scope for s in adapter.settings()
+                     if s.scope.startswith("model:")
+                     and fnmatch.fnmatch(s.scope.removeprefix("model:"), pattern)]
+        if remaining:
+            leftover.append(name)
+            print(f"== {name}: ✗ 仍存在匹配 {pattern} 的条目: {remaining}")
+        else:
+            print(f"== {name}: ✓ 已无匹配 {pattern} 的模型级条目")
+    if leftover:
+        print(f"\n验证失败: {', '.join(leftover)}", file=sys.stderr)
+        return 1
+    print("\n全部通过。")
+    return 0
 
 
 def _check_one(adapter: Adapter, model: str | None, expect: int | None,
@@ -811,6 +861,8 @@ def main(argv: list[str] | None = None) -> int:
     setter.add_argument("-a", "--agent")
     setter.add_argument("-m", "--model", help="只改该模型（claude/pi 支持）")
     setter.add_argument("-c", "--context", type=int, help="模型上下文窗口 tokens（pi/opencode 换算用）")
+    setter.add_argument("--unset", action="store_true",
+                        help="删除匹配的模型级条目（需 -m，支持 * 通配；目前 pi 支持）")
     toggle = setter.add_mutually_exclusive_group()
     toggle.add_argument("--enable", dest="enable", action="store_true", default=None)
     toggle.add_argument("--disable", dest="enable", action="store_false")
@@ -828,8 +880,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if getattr(args, "no_native_check", False):
         args.native = False
-    if args.command == "set" and args.threshold is None and args.enable is None:
-        parser.error("set 需要 threshold 或 --enable/--disable")
+    if args.command == "set" and args.threshold is None and args.enable is None and not args.unset:
+        parser.error("set 需要 threshold、--unset 或 --enable/--disable")
     return args.func(args)
 
 

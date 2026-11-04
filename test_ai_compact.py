@@ -162,6 +162,18 @@ def test_pi_roundtrip_with_context_lookup():
     assert ok, lines
 
 
+def test_pi_context_from_models_store():
+    root = _tmp_root()
+    agent_dir = root / ".pi" / "agent"
+    _write(agent_dir / "settings.json", {"defaultProvider": "meta", "defaultModel": "spark",
+                                         "compaction": {"reserveTokens": 1000}})
+    _write(agent_dir / "models-store.json", {"meta": {"models": [
+        {"id": "spark", "contextWindow": 1048576}]}})
+    adapter = ac.Pi(root)
+    assert adapter.context(None) == 1048576
+    assert adapter.settings()[0].threshold == 1047576
+
+
 def test_pi_requires_context():
     root = _tmp_root()
     _write(root / ".pi" / "agent" / "settings.json", {"compaction": {}})
@@ -197,6 +209,47 @@ def test_opencode_set_and_read():
         pass
     else:
         raise AssertionError("expected SystemExit for per-model opencode write")
+
+
+def test_pi_unset_by_pattern():
+    root = _tmp_root()
+    agent_dir = root / ".pi" / "agent"
+    _write(agent_dir / "settings.json", {
+        "defaultProvider": "p", "defaultModel": "m",
+        "compaction": {"enabled": True, "reserveTokens": 1000, "modelOverrides": {
+            "coding-plan/a": {"reserveTokens": 1},
+            "coding-plan/b": {"reserveTokens": 2},
+            "magpie/c": {"reserveTokens": 3}}},
+    })
+    adapter = ac.Pi(root)
+    changes = adapter.apply(None, "coding-plan/*", None, None, unset=True)
+    assert len(changes) == 2, changes
+    data = json.loads((agent_dir / "settings.json").read_text())
+    assert list(data["compaction"]["modelOverrides"]) == ["magpie/c"], data
+    assert data["compaction"]["reserveTokens"] == 1000
+    # last entry removal drops the empty map
+    adapter.apply(None, "magpie/*", None, None, unset=True)
+    data = json.loads((agent_dir / "settings.json").read_text())
+    assert "modelOverrides" not in data["compaction"], data
+    # no match is an error, not a silent success
+    (agent_dir / "settings.json").write_text(json.dumps({"compaction": {}}))
+    try:
+        adapter.apply(None, "nope/*", None, None, unset=True)
+    except SystemExit as exc:
+        assert "没有匹配" in str(exc)
+    else:
+        raise AssertionError("expected SystemExit when nothing matches")
+
+
+def test_pi_unset_requires_model():
+    root = _tmp_root()
+    _write(root / ".pi" / "agent" / "settings.json", {"compaction": {}})
+    try:
+        ac.Pi(root).apply(None, None, None, None, unset=True)
+    except SystemExit as exc:
+        assert "--model" in str(exc)
+    else:
+        raise AssertionError("expected SystemExit without --model")
 
 
 def test_cursor_read_only():

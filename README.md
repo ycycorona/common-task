@@ -236,6 +236,7 @@ python3 ai_compact.py scan --agent pi --json     # 单看一家 / 机器可读
 python3 ai_compact.py set 200000                 # 统一阈值，写完自动验证
 python3 ai_compact.py set 300000 -a claude -m claude-opus-5-5   # 模型级
 python3 ai_compact.py set 200000 -a pi -c 1048000               # 换算 reserve 需上下文
+python3 ai_compact.py set --unset -a pi -m 'coding-plan/*'      # 删掉匹配的模型级条目
 python3 ai_compact.py set --disable -a opencode  # 关掉自动压缩
 python3 ai_compact.py verify -a codex --expect 300000
 ```
