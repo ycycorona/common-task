@@ -1,0 +1,232 @@
+#!/usr/bin/env python3
+"""Self-checks for ai_compact.py. Run: python3 test_ai_compact.py"""
+
+import json
+import sys
+import tempfile
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+import ai_compact as ac
+
+FAILS = []
+
+
+def check(name, fn):
+    try:
+        fn()
+        print(f"ok   {name}")
+    except AssertionError as exc:
+        FAILS.append(name)
+        print(f"FAIL {name}: {exc}")
+
+
+def test_jsonc_load():
+    text = '{\n  // comment\n  "a": 1,\n  "b": [1, 2,],\n  "c": "// not a comment",\n}'
+    assert ac.jsonc_load(text) == {"a": 1, "b": [1, 2], "c": "// not a comment"}
+    assert ac.jsonc_load('{"s": "a/*b*/c", "t": true}') == {"s": "a/*b*/c", "t": True}
+
+
+def test_jsonc_set_insert():
+    text = '{\n  "mcp": {"x": 1},\n}\n'
+    out = ac.jsonc_set_top_key(text, "compaction", {"auto": True, "buffer": 100})
+    assert ac.jsonc_load(out)["compaction"] == {"auto": True, "buffer": 100}
+    assert ac.jsonc_load(out)["mcp"] == {"x": 1}
+    assert "// keep" not in out
+
+
+def test_jsonc_set_replace_keeps_comments():
+    text = '{\n  // keep me\n  "compaction": {"auto": false, "prune": true},\n  "other": 1\n}'
+    out = ac.jsonc_set_top_key(text, "compaction", {"auto": True, "prune": True, "buffer": 7})
+    assert "// keep me" in out, out
+    parsed = ac.jsonc_load(out)
+    assert parsed["compaction"] == {"auto": True, "prune": True, "buffer": 7}, parsed
+    assert parsed["other"] == 1
+
+
+def test_jsonc_set_empty_doc():
+    assert ac.jsonc_load(ac.jsonc_set_top_key("{}", "compaction", {"auto": True})) == {
+        "compaction": {"auto": True}}
+
+
+def test_toml_set():
+    text = 'model = "gpt-6.1-sol"\nmodel_auto_compact_token_limit = 250000\n\n[model_providers.custom]\nname = "x"\n'
+    out = ac.toml_set(text, "model_auto_compact_token_limit", 200000)
+    assert "model_auto_compact_token_limit = 200000" in out
+    assert out.count("model_auto_compact_token_limit") == 1
+    import tomllib
+    assert tomllib.loads(out)["model_auto_compact_token_limit"] == 200000
+    assert tomllib.loads(out)["model_providers"]["custom"]["name"] == "x"
+
+
+def test_toml_set_insert():
+    text = '[profiles.a]\nmodel = "x"\n'
+    out = ac.toml_set(text, "model_auto_compact_token_limit", 123)
+    import tomllib
+    parsed = tomllib.loads(out)
+    assert parsed["model_auto_compact_token_limit"] == 123
+    assert parsed["profiles"]["a"]["model"] == "x"
+    # inserted above the table header, not inside it
+    assert out.splitlines()[0].startswith("model_auto_compact_token_limit")
+
+
+def _tmp_root() -> Path:
+    return Path(tempfile.mkdtemp(prefix="ai-compact-test-"))
+
+
+def _write(path: Path, payload) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2) if not isinstance(payload, str) else payload)
+
+
+def test_claude_set_and_read():
+    root = _tmp_root()
+    settings = root / ".claude" / "settings.json"
+    _write(settings, {"model": "opus", "autoCompactEnabled": True, "autoCompactWindow": 250000,
+                      "modelSettings": {"opus": {"effortLevel": "high"}}})
+    adapter = ac.Claude(root)
+    changes = adapter.apply(300000, "opus", True, None)
+    assert changes, changes
+    data = json.loads(settings.read_text())
+    assert data["autoCompactWindow"] == 250000, "per-model write must not touch the global window"
+    assert data["modelSettings"]["opus"]["autoCompactWindow"] == 300000
+    assert data["modelSettings"]["opus"]["effortLevel"] == "high"
+    scopes = {s.scope: s for s in adapter.settings()}
+    assert scopes["global"].threshold == 250000
+    assert scopes["model:opus"].threshold == 300000
+    ok, lines = ac._check_one(adapter, "opus", 300000, None, native=False)
+    assert ok, lines
+    adapter.apply(200000, None, None, None)
+    scopes = {s.scope: s for s in adapter.settings()}
+    assert scopes["global"].threshold == 200000
+    assert scopes["model:opus"].threshold == 300000
+    # out of range
+    try:
+        adapter.apply(50, None, None, None)
+    except SystemExit:
+        pass
+    else:
+        raise AssertionError("expected SystemExit for out-of-range window")
+
+
+def test_codex_set_and_read():
+    root = _tmp_root()
+    config = root / ".codex" / "config.toml"
+    config.parent.mkdir(parents=True)
+    config.write_text('model = "gpt-6.1-sol"\nmodel_auto_compact_token_limit = 250000\n'
+                      '# keep this comment\n[projects."/tmp"]\ntrust_level = "trusted"\n')
+    adapter = ac.Codex(root)
+    adapter.apply(200000, None, None, None)
+    text = config.read_text()
+    assert "model_auto_compact_token_limit = 200000" in text
+    assert "# keep this comment" in text
+    assert ac.resolve(adapter, None).threshold == 200000
+    ok, lines = ac._check_one(adapter, None, 200000, None, native=False)
+    assert ok, lines
+    for bad in ({"model": "x"}, {"enabled": True}):
+        try:
+            adapter.apply(None, bad.get("model"), bad.get("enabled"), None)
+        except SystemExit:
+            pass
+        else:
+            raise AssertionError(f"expected SystemExit for {bad}")
+
+
+def test_pi_roundtrip_with_context_lookup():
+    root = _tmp_root()
+    agent_dir = root / ".pi" / "agent"
+    _write(agent_dir / "settings.json", {
+        "defaultProvider": "magpie",
+        "defaultModel": "auto/gpt-6.1-sol",
+        "compaction": {"enabled": True, "reserveTokens": 250000, "keepRecentTokens": 30000,
+                       "modelOverrides": {"magpie/auto/gpt-6.1-sol": {"reserveTokens": 250000}}},
+    })
+    _write(agent_dir / "models.json", {"providers": {"magpie": {"models": [
+        {"id": "auto/gpt-6.1-sol", "contextWindow": 500000}]}}})
+    adapter = ac.Pi(root)
+    assert adapter.context(None) == 500000
+    scopes = {s.scope: s for s in adapter.settings()}
+    assert scopes["global"].threshold == 250000, scopes["global"]
+    assert scopes["model:magpie/auto/gpt-6.1-sol"].threshold == 250000
+
+    # global: threshold 200000 -> reserve 300000
+    adapter.apply(200000, None, None, None)
+    data = json.loads((agent_dir / "settings.json").read_text())
+    assert data["compaction"]["reserveTokens"] == 300000
+    # per-model, explicit context
+    adapter.apply(400000, "magpie/auto/gpt-6.1-sol", None, 500000)
+    data = json.loads((agent_dir / "settings.json").read_text())
+    assert data["compaction"]["modelOverrides"]["magpie/auto/gpt-6.1-sol"]["reserveTokens"] == 100000
+    ok, lines = ac._check_one(adapter, "magpie/auto/gpt-6.1-sol", 400000, None, native=False)
+    assert ok, lines
+
+
+def test_pi_requires_context():
+    root = _tmp_root()
+    _write(root / ".pi" / "agent" / "settings.json", {"compaction": {}})
+    try:
+        ac.Pi(root).apply(100000, None, None, None)
+    except SystemExit as exc:
+        assert "context" in str(exc)
+    else:
+        raise AssertionError("expected SystemExit without context")
+
+
+def test_opencode_set_and_read():
+    root = _tmp_root()
+    config = root / ".config" / "opencode" / "opencode.jsonc"
+    config.parent.mkdir(parents=True)
+    config.write_text('{\n  "model": "m1",\n  "provider": {"p": {"models": '
+                      '{"m1": {"limit": {"context": 500000}}}}},\n}\n')
+    adapter = ac.OpenCode(root)
+    adapter.apply(300000, None, True, None)
+    text = config.read_text()
+    assert "// " not in text
+    data = ac.jsonc_load(text)
+    assert data["compaction"] == {"auto": True, "buffer": 200000}, data
+    assert data["provider"]["p"]["models"]["m1"]["limit"]["context"] == 500000
+    ok, lines = ac._check_one(adapter, None, 300000, True, native=False)
+    assert ok, lines
+    # second write keeps auto flag and updates buffer only
+    adapter.apply(400000, None, None, 500000)
+    assert ac.jsonc_load(config.read_text())["compaction"] == {"auto": True, "buffer": 100000}
+    try:
+        adapter.apply(100000, "some-model", None, 500000)
+    except SystemExit:
+        pass
+    else:
+        raise AssertionError("expected SystemExit for per-model opencode write")
+
+
+def test_cursor_read_only():
+    root = _tmp_root()
+    _write(root / ".cursor" / "cli-config.json", {"model": {"modelId": "grok-4.7"}})
+    adapter = ac.CursorAgent(root)
+    settings = adapter.settings()
+    assert settings[0].threshold is None and settings[0].enabled is None
+    assert settings[0].native["model"] == "grok-4.7"
+    try:
+        adapter.apply(100000, None, None, None)
+    except SystemExit:
+        pass
+    else:
+        raise AssertionError("expected SystemExit for cursor-agent write")
+
+
+def test_verify_detects_mismatch():
+    root = _tmp_root()
+    _write(root / ".claude" / "settings.json", {"autoCompactEnabled": True, "autoCompactWindow": 250000})
+    adapter = ac.Claude(root)
+    ok, lines = ac._check_one(adapter, None, 200000, None, native=False)
+    assert not ok and any("✗" in line for line in lines), lines
+
+
+for name, fn in list(globals().items()):
+    if name.startswith("test_"):
+        check(name, fn)
+
+if FAILS:
+    print(f"\n{len(FAILS)} 个检查失败: {', '.join(FAILS)}")
+    sys.exit(1)
+print("\n全部检查通过")

@@ -215,6 +215,35 @@ python3 archives/fetch_supermarket_folders.py --selfcheck
 -   **`extract_mp3.sh`**: 从视频文件中提取音频并转换为 MP3 格式。支持传入多个文件顺序处理，自动根据输入文件名生成 `.mp3` 输出。支持丰富的参数自定义（码率、采样率、声道、音频流选择、起止时间截取等）。自动检测输入音频是否为 MP3，若是则直接复制音轨避免重复编码。运行时显示当前处理进度（`[N/TOTAL | PERCENT%]`），并自动过滤 ffmpeg 正常日志仅保留警告和报错，最后输出处理统计（成功/失败/总数）。单个文件失败不会中断后续任务。
 -   **`run_whisper_screen.sh`**: VideoCaptioner 转录任务管理器。使用 screen 在后台运行转录任务，固定复用单一 session 和 window，支持任务检测、避免重复启动和 Attached 状态保护。
 
+### 8. AI Agent 自动压缩阈值 (`ai_compact.py`)
+
+探测本机已安装的 AI Agent（claude / codex / pi / opencode / cursor-agent），读它们自己的配置
+和文档，报出自动压缩的开关状态、触发阈值和模型级覆盖，然后按统一阈值写入并回读验证。
+
+阈值统一表示"上下文达到多少 tokens 时触发自动压缩"；各家原生项不同，写入时换算：
+
+| Agent | 开关 | 阈值项 | 模型级 |
+| --- | --- | --- | --- |
+| claude | `autoCompactEnabled` | `autoCompactWindow`（100000–1000000 或 `"auto"`） | `modelSettings.<model>.autoCompactWindow` |
+| codex | 无 | `model_auto_compact_token_limit` | 不支持（`[profiles.*]` 内同名键会被忽略） |
+| pi | `compaction.enabled` | `compaction.reserveTokens` = 上下文 - 阈值 | `compaction.modelOverrides.<provider/model>.reserveTokens` |
+| opencode | `compaction.auto` | `compaction.buffer` = 上下文 - 阈值 | 不支持 |
+| cursor-agent | 无（未暴露） | 无 | 无 |
+
+```bash
+python3 ai_compact.py scan                       # 探测全部已安装 Agent
+python3 ai_compact.py scan --agent pi --json     # 单看一家 / 机器可读
+python3 ai_compact.py set 200000                 # 统一阈值，写完自动验证
+python3 ai_compact.py set 300000 -a claude -m claude-opus-5-5   # 模型级
+python3 ai_compact.py set 200000 -a pi -c 1048000               # 换算 reserve 需上下文
+python3 ai_compact.py set --disable -a opencode  # 关掉自动压缩
+python3 ai_compact.py verify -a codex --expect 300000
+```
+
+`set` 会先落盘再进验证：回读配置比对阈值，并调用 Agent 自带的解析器
+（codex 用 `codex doctor`，opencode 用 `opencode debug config`）确认配置真被认；不一致时退出码 1。
+
+
 ---
 
 ## 文档
