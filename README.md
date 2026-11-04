@@ -18,7 +18,7 @@
 | `swiftc` | `zed-defaults/` 编译 | Xcode Command Line Tools |
 
 Python 依赖见 [`requirements.txt`](requirements.txt)：`jvav`、`huggingface_hub`、`yt-dlp` 是运行依赖，
-`pytest`、`requests` 只有跑自检或 `scratch/` 踩点脚本时才需要。
+`pytest` 只有跑 `media/test_extract_mp3.py` 时才需要。
 
 ## 安装方式
 
@@ -42,7 +42,6 @@ pip install -r requirements.txt
 | `archives/` | 一次性/归档任务（荷兰超市宣传册等） |
 | `orca-server/`、`orca-windows/` | Orca 无头服务端的更新维护（Linux / Windows） |
 | `zed-defaults/` | macOS 默认程序切到 Zed |
-| `scratch/` | 踩点用的临时脚本，不算测试，不保证可跑 |
 
 根目录只留 `README.md`、`AGENTS.md`、`requirements.txt` 与各子目录。
 

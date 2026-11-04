@@ -7,11 +7,8 @@ jvav
 # download/hf_snapshot_download.py
 huggingface_hub
 
-# download/download_dmm_preview.py、scratch/test_dlp.py
+# download/download_dmm_preview.py
 yt-dlp
 
-# 自检与踩点脚本（跑测试才需要）
-# media/test_extract_mp3.py
+# 自检（跑测试才需要）：media/test_extract_mp3.py
 pytest
-# scratch/test_dl.py
-requests
