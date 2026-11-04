@@ -228,8 +228,7 @@ python3 archives/fetch_supermarket_folders.py --selfcheck
 项目中还包含以下用于快速处理媒体文件的 Shell 脚本：
 
 -   **`media/heic_batch_convert.sh`**: 批量将 HEIC 图片转换为 JPEG 或 PNG 格式。
--   **`media/video2aac.sh`**: 批量从视频中提取音频并转换为 AAC 格式（256k 码率）。支持单个文件或递归处理整个目录，自动识别常见视频格式（mp4/mkv/mov/avi/flv/webm/m4v/wmv），跳过已存在的 AAC 文件避免重复转换。
--   **`media/video2flac.sh` / `media/video2opus.sh`**: 快速从视频中提取音频并转换为高压缩率的 FLAC 或 Opus 格式（适配 OpenAI Whisper 或其他 AI 音频转录工具）。`video2opus.sh` 会跳过隐藏文件/目录。
+-   **`media/video2aac.sh` / `media/video2flac.sh` / `media/video2opus.sh`**: 从视频提取音频为 AAC / FLAC / Opus（`video2opus.sh` 适配 Whisper 类转录）。三者是薄壳，共享实现在 `media/video2audio.sh`：转码参数、输出后缀与"是否跳过隐藏文件"集中在 `profile_set()`（aac 256k 跳过隐藏文件；flac 16k 单声道、历史上不跳过；opus 单声道 32k VOIP）。自检：`python3 media/test_video2audio.py`。
 -   **`media/video_clip_to_wav.sh`**: 从视频中按指定的起止时间极速截取片段，并提取其音频。音频输出支持格式为 Whisper 友好的 WAV (16kHz 单声道 PCM) 或高质量 VBR 的 MP3。支持自动识别省略参数以输出至原目录。
 -   **`media/video_split_to_flac.sh`**: 将长视频或音频文件按指定时长切分（默认 10 分钟），并自动将切分后的分段音频转换为 FLAC（默认）或 MP3 格式。
 -   **`media/extract_mp3.sh`**: 从视频文件中提取音频并转换为 MP3 格式。支持传入多个文件顺序处理，自动根据输入文件名生成 `.mp3` 输出。支持丰富的参数自定义（码率、采样率、声道、音频流选择、起止时间截取等）。自动检测输入音频是否为 MP3，若是则直接复制音轨避免重复编码。运行时显示当前处理进度（`[N/TOTAL | PERCENT%]`），并自动过滤 ffmpeg 正常日志仅保留警告和报错，最后输出处理统计（成功/失败/总数）。单个文件失败不会中断后续任务。
