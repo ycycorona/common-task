@@ -105,7 +105,6 @@ def toml_set(text: str, key: str, value) -> str:
 def _json_value_span(text: str, start: int) -> int:
     """End index (exclusive) of the JSON value beginning at `start`."""
     if text[start] in "{[":
-        close = {"{": "}", "[": "]"}[text[start]]
         depth, i, in_str, esc = 0, start, False, False
         while i < len(text):
             c = text[i]
