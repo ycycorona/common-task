@@ -107,18 +107,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="自定义缓存目录（可选）",
     )
     
-    # 断点续传
+    # 断点续传（huggingface_hub 2.x 已内置自动续传，保留参数只为兼容旧命令行）
     p.add_argument(
         "--resume",
         action="store_true",
-        help="启用断点续传，继续未完成的下载",
+        help="已废弃：huggingface_hub 2.x 自动续传，保留仅为兼容旧命令行",
     )
     
-    # 禁用符号链接
+    # 禁用符号链接（huggingface_hub 2.x 写入 local_dir 时不再使用符号链接）
     p.add_argument(
         "--no-symlinks",
         action="store_true",
-        help="不在输出目录使用符号链接（推荐在 macOS/Windows 上使用）",
+        help="已废弃：huggingface_hub 2.x 的 local_dir 不再用符号链接，保留仅为兼容旧命令行",
     )
     
     # 文件包含模式
@@ -187,10 +187,8 @@ def main() -> int:
             repo_type=args.repo_type,          # 仓库类型
             revision=args.revision,            # 版本/分支
             local_dir=str(out_dir),            # 本地输出目录
-            local_dir_use_symlinks=(not args.no_symlinks),  # 是否使用符号链接
             cache_dir=args.cache_dir,          # 缓存目录
             token=token,                       # 访问令牌
-            resume_download=args.resume,       # 是否断点续传
             allow_patterns=args.include,       # 包含模式
             ignore_patterns=args.exclude,      # 排除模式
         )

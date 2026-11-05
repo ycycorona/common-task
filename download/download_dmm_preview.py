@@ -10,7 +10,10 @@ import subprocess
 import sys
 import os
 import time
+from typing import Any
+
 import yt_dlp
+import yt_dlp.utils  # yt_dlp.utils.DownloadError 靠子模块导入才可见（类型检查需要）
 from jvav.utils import DmmUtil
 
 
@@ -38,7 +41,8 @@ def start_tunnel(host, port=None, timeout=10.0):
     raise RuntimeError(f"ssh tunnel to {host} did not open port {port} within {timeout}s")
 
 def download_video(url, filename, proxy, dmm, threads):
-    ydl_opts = {
+    # yt-dlp 的 params 是 TypedDict(_Params)，这里混着字符串/布尔/整数/嵌套 dict，只能按 Any 传
+    ydl_opts: Any = {
         'outtmpl': filename,
         'http_headers': {
             'User-Agent': dmm.ua(),
