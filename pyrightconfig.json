@@ -2,5 +2,8 @@
   // basic keeps type errors and drops basedpyright's recommended-mode annotation noise
   "typeCheckingMode": "basic",
   "extraPaths": ["devps"],
-  "exclude": ["**/.venv", "**/node_modules", "**/__pycache__"]
+  // venv: 按 README 把 requirements.txt 装进 .venv，三方依赖（yt-dlp/jvav/…）才解析得到
+  "venvPath": ".",
+  "venv": ".venv",
+  "exclude": ["**/.venv", "**/node_modules", "**/__pycache__", "archives"]
 }
