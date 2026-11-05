@@ -539,7 +539,9 @@ class OpenCode(Adapter):
     supports_model = False
 
     def config_path(self) -> Path:
-        return self.root / ".config" / "opencode" / "opencode.jsonc"
+        base = self.root / ".config" / "opencode"
+        jsonc = base / "opencode.jsonc"
+        return jsonc if jsonc.exists() else base / "opencode.json"
 
     def _data(self) -> dict[str, Any]:
         path = self.config_path()

@@ -213,6 +213,20 @@ def test_opencode_set_and_read():
         raise AssertionError("expected SystemExit for per-model opencode write")
 
 
+def test_opencode_json_fallback():
+    """opencode.json (the common filename) must be picked when there is no .jsonc."""
+    root = _tmp_root()
+    config = root / ".config" / "opencode" / "opencode.json"
+    config.parent.mkdir(parents=True)
+    config.write_text(json.dumps({"compaction": {"auto": True, "buffer": 650000}}))
+    adapter = ac.OpenCode(root)
+    assert adapter.config_path() == config, adapter.config_path()
+    assert adapter.settings(1000000)[0].threshold == 350000
+    adapter.apply(400000, None, None, 1000000)
+    assert json.loads(config.read_text())["compaction"]["buffer"] == 600000
+    assert not (config.parent / "opencode.jsonc").exists()
+
+
 def test_pi_unset_by_pattern():
     root = _tmp_root()
     agent_dir = root / ".pi" / "agent"
