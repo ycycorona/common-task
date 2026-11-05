@@ -1,5 +1,6 @@
 {
   // basic keeps type errors and drops basedpyright's recommended-mode annotation noise
   "typeCheckingMode": "basic",
+  "extraPaths": ["devps"],
   "exclude": ["**/.venv", "**/node_modules", "**/__pycache__"]
 }
