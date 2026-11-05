@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Self-checks for ai_compact.py. Run: python3 ai-compact/test_ai_compact.py"""
 
+import argparse
+import contextlib
+import io
 import json
 import sys
 import tempfile
@@ -225,6 +228,20 @@ def test_opencode_json_fallback():
     adapter.apply(400000, None, None, 1000000)
     assert json.loads(config.read_text())["compaction"]["buffer"] == 600000
     assert not (config.parent / "opencode.jsonc").exists()
+
+
+def test_scan_passes_context():
+    root = _tmp_root()
+    _write(root / ".config" / "opencode" / "opencode.json",
+           {"compaction": {"auto": True, "buffer": 650000}})
+    original, ac.registry = ac.registry, lambda *_a, **_k: {"opencode": ac.OpenCode(root)}
+    out = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(out):
+            code = ac.cmd_scan(argparse.Namespace(agent="opencode", json=False, context=1000000))
+    finally:
+        ac.registry = original
+    assert code == 0 and "350000" in out.getvalue(), out.getvalue()
 
 
 def test_pi_unset_by_pattern():

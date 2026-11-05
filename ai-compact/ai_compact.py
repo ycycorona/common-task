@@ -707,7 +707,7 @@ def cmd_scan(args) -> int:
         if not adapter.installed():
             unknown.append(name)
             continue
-        for setting in adapter.settings():
+        for setting in adapter.settings(args.context):
             rows.append(setting.as_dict() | {"label": adapter.label, "knob": adapter.knob})
 
     if args.json:
@@ -856,6 +856,7 @@ def main(argv: list[str] | None = None) -> int:
 
     scan = sub.add_parser("scan", help="探测已安装 Agent 的自动压缩设置")
     scan.add_argument("-a", "--agent")
+    scan.add_argument("-c", "--context", type=int, help="模型上下文窗口 tokens（pi/opencode 换算用）")
     scan.add_argument("--json", action="store_true")
     scan.add_argument("--no-native-check", action="store_true", help="兼容占位（scan 不调用原生校验）")
     scan.set_defaults(func=cmd_scan)
