@@ -20,6 +20,8 @@ cd ~/portal && docker compose up -d          # 首次；之后 yaml 会自动热
 
 `--delete` 会删掉 `~/portal` 里容器自动生成的东西（`config/logs/`、空的 `custom.css`、`docker.yaml` 等），容器下次启动会重新生成，因此同步后跟一次 `up -d` 最省事。
 
+运行目录另有一份**本机操作贴士** `~/portal/README.md`（常用命令、目录分工、哪些文件是自动生成的空壳），读者是「此刻在这台机器上操作的人」，不随本文件同步。本文件是事实源与换机手册。
+
 ## 首次部署（换机器时）
 
 ```sh
