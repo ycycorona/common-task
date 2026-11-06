@@ -38,6 +38,7 @@ pip install -r requirements.txt
 | `tools/` | 小工具：Codex 通知钩子、远程目录同步 |
 | `devtools/` | 仓库自身的文档校验（`check_docs.sh` + 自检） |
 | `devps/` | 孤儿开发进程检测/停止（macOS，零依赖） |
+| `portal/` | 个人开发门户站（free-arm 上的 Homepage 配置：机器与服务入口、状态灯、平台深链） |
 | `ai-compact/` | AI Agent 自动压缩阈值的探测与设置 |
 | `archives/` | 一次性/归档任务（荷兰超市宣传册等） |
 | `orca-server/`、`orca-windows/` | Orca 无头服务端的更新维护（Linux / Windows） |

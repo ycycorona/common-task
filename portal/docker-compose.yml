@@ -1,0 +1,15 @@
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    # host 网络：容器里访问 127.0.0.1 和 tailnet 都通（bridge 出来的流量会被本机 INPUT 链 REJECT，
+    # 因为它只放行 22/28010），resources 小组件读到的也是本机真实数据。
+    network_mode: host
+    pid: host
+    volumes:
+      - ./config:/app/config
+    environment:
+      PORT: "8790"
+      # 对外只经 tailnet 暴露：iptables 默认 REJECT，公网到不了 8790，和望楼 Caddy 同一个暴露面
+      HOMEPAGE_ALLOWED_HOSTS: "100.126.255.75:8790,127.0.0.1:8790,free-arm:8790,free-arm.taile8af3.ts.net:8790"
+    restart: unless-stopped

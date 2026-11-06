@@ -1,0 +1,19 @@
+title: 开发 Portal
+theme: dark
+color: slate
+headerStyle: clean
+statusStyle: dot
+target: _self
+layout:
+  望楼与编排:
+    style: row
+    columns: 4
+  开发服务:
+    style: row
+    columns: 4
+  监控与台账:
+    style: row
+    columns: 4
+  远程机器:
+    style: row
+    columns: 4
