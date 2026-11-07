@@ -54,6 +54,7 @@ curl -sI http://127.0.0.1:8790/ | head -1               # 期望 200
         href: http://<host>:<port>/
         description: 一句话
         ping: http://<host>:<port>/   # 可选：有这一行才出绿/红状态点
+        target: _blank             # 可选：新标签打开，不动本站页签（全局默认是 settings.yaml 里的 _self）
 ```
 
 新分组要同时在 `config/settings.yaml` 的 `layout` 里加同名键，否则不显示。
