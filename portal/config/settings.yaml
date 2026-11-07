@@ -8,15 +8,18 @@ layout:
   望楼与编排:
     style: row
     columns: 4
-  开发服务:
+  流水线与存储:
+    style: row
+    columns: 4
+  开发环境与桌面:
+    style: row
+    columns: 4
+  网关与运维管控:
     style: row
     columns: 4
   Farm PC 算力:
     style: row
     columns: 3
-  监控与台账:
-    style: row
-    columns: 4
   远程机器:
     style: row
-    columns: 4
+    columns: 5

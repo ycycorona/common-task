@@ -4,45 +4,82 @@
         href: http://100.126.255.75:8787/
         description: agent-runs 只读运行面板（Caddy 8787）
         ping: http://100.126.255.75:8787/
-    - agentsview:
-        icon: mdi-eye-outline
-        href: http://100.126.255.75:8080/
-        description: 需登录
-        ping: http://100.126.255.75:8080/
     - 提示词生成器:
         icon: mdi-text-box-outline
         href: http://100.126.255.75:8787/prompts.html
-        description: Orca orchestration 提示词
+        description: Orca orchestration 提示词生成器
         ping: http://100.126.255.75:8787/prompts.html
+    - agentsview:
+        icon: mdi-eye-outline
+        href: http://100.126.255.75:8080/
+        description: Agent 舰队会话查看 · 需登录
+        ping: http://100.126.255.75:8080/
+    - 执行台账:
+        icon: mdi-clipboard-text-clock-outline
+        href: http://100.75.252.49:18080/
+        description: rigledger · 远程测试与执行记录
+        ping: http://100.75.252.49:18080/
 
-- 开发服务:
-    - Orca:
-        icon: mdi-monitor-dashboard
-        href: http://100.126.255.75:6768/
-        # custom.js 按平台改写：Mac/Windows 跳 orca:// 桌面应用，其余落这个 web 地址
-        description: 桌面与手机进 App · 仅浏览器进 Web
-        ping: http://100.126.255.75:6768/
-    - Orca 桌面（VNC）:
-        icon: mdi-monitor
-        href: vnc://100.126.255.75:5900
-        description: x11vnc :5900
+- 流水线与存储:
+    - sub-pipe 工作台:
+        icon: mdi-view-dashboard-outline
+        href: http://100.117.100.126:8874/runs/
+        description: orc-1 可视化运行管理 · 用户名 kkk
+        ping: http://100.117.100.126:8874/runs/
     - sub-pipe 案例台:
         icon: mdi-flask-outline
         href: http://100.126.255.75:8766/
-        description: case-playground
+        description: free-arm · case-playground
         ping: http://100.126.255.75:8766/
-    # magpie web（free-arm 上的 `magpie web`）的网页管理界面：根路径认 cookie，首访须带
-    # ?k=<web key> 一次（key 在 free-arm 的 ~/.config/magpie/web.env，不入 Git），故不设 ping
-    - magpie 管理:
-        icon: mdi-cog-outline
-        href: http://100.126.255.75:3430/
-        description: Web 管理 · 首访需 ?k= 参数
-    # 澄流（115-util）没有常驻界面：AriaNg 只经 bin/115web 的临时 ssh 隧道 + 本机 8080 静态服务打开，故不列入
-    - sub-pipe2（orc-1）:
+    - sub-pipe2 接口:
         icon: mdi-subtitles-outline
         href: http://100.117.100.126:8875/docs
-        description: 已接 Farm PC 分离 / ASR / 对齐 · 每运行选人声开关
+        description: orc-1 FastAPI 文档 · 已接 Farm PC 算力
         ping: http://100.117.100.126:8875/v1/openapi.json
+    - AList 存储网关:
+        icon: mdi-folder-network-outline
+        href: http://100.89.79.120:5244/
+        description: mini-pve-nas · 115 与本地存储聚合
+        ping: http://100.89.79.120:5244/
+
+- 开发环境与桌面:
+    - Orca（free-arm）:
+        icon: mdi-monitor-dashboard
+        href: http://100.126.255.75:6768/
+        description: 桌面与手机进 App · 仅浏览器进 Web
+        ping: http://100.126.255.75:6768/
+    - Orca（Mac）:
+        icon: mdi-laptop
+        href: http://100.100.102.49:6768/
+        description: ycyber-mac · 主力端 Orca Web IDE
+        ping: http://100.100.102.49:6768/
+    - Orca 桌面（VNC）:
+        icon: mdi-monitor
+        href: vnc://100.126.255.75:5900
+        description: free-arm · x11vnc :5900 GUI 环境
+    - Farm PC 远程桌面:
+        icon: mdi-remote-desktop
+        href: rdp://100.68.205.95:3389
+        description: farm-pc · Win11 RDP :3389 GPU 环境
+
+- 网关与运维管控:
+    - PVE 虚拟化控制台:
+        icon: mdi-server-network
+        href: https://100.92.84.2:8006/
+        description: ycy-mini-pve · Proxmox VE 宿主控制台
+    - 主机监控（Komari）:
+        icon: mdi-chart-line
+        href: http://100.75.252.49:25774/
+        description: vps_gem · 各机 CPU/内存/网络监控
+        ping: http://100.75.252.49:25774/
+    - magpie 管理（free-arm）:
+        icon: mdi-cog-outline
+        href: http://100.126.255.75:3430/
+        description: free-arm Web 管理 · 首访需 ?k= 参数
+    - magpie 管理（Farm PC）:
+        icon: mdi-cog-box
+        href: http://100.68.205.95:7425/
+        description: farm-pc Web 管理 · 首访需 ?k= 参数
 
 - Farm PC 算力:
     - 算力服务总览:
@@ -82,20 +119,32 @@
     - farm-pc:
         icon: mdi-desktop-tower-monitor
         href: ssh://100.68.205.95
-        description: Win11 + WSL · GPU / 115 下载机
+        description: Win11 + WSL · GPU / 算力机
     - ycyber-mac:
         icon: mdi-laptop
         href: ssh://100.100.102.49
         description: 主力开发机 · Orca server
-
-- 监控与台账:
-    - 主机监控:
-        icon: mdi-chart-line
-        href: http://100.75.252.49:25774/
-        description: Komari（vps_gem）· 各机 CPU/内存/磁盘
-        ping: http://100.75.252.49:25774/
-    - 执行台账:
-        icon: mdi-clipboard-text-clock-outline
-        href: http://100.75.252.49:18080/
-        description: rigledger · 远程测试记录
-        ping: http://100.75.252.49:18080/
+    - bwg-us:
+        icon: mdi-cloud-outline
+        href: ssh://100.92.121.96
+        description: 搬瓦工 美西 VPS · 出口与备用节点
+    - vps_gem:
+        icon: mdi-server-network-outline
+        href: ssh://100.75.252.49
+        description: 俄罗斯 VPS · Komari 监控 / rigledger 宿主
+    - vps_jp:
+        icon: mdi-server-network-outline
+        href: ssh://100.84.228.71
+        description: 日本 VPS · 备用节点
+    - ycy-mini-pve:
+        icon: mdi-server-security
+        href: ssh://100.92.84.2
+        description: PVE 物理宿主机 · 家庭虚拟化核心
+    - pve-agents-bot-1:
+        icon: mdi-robot-outline
+        href: ssh://100.72.108.125
+        description: VM104（Debian 13）· Agent 专属开发机
+    - mini-pve-nas:
+        icon: mdi-nas
+        href: ssh://100.89.79.120
+        description: VM105 · 家庭 NAS 存储

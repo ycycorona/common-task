@@ -1,7 +1,30 @@
-- 常用:
-    - GitHub:
-        - abbr: GH
-          href: https://github.com/ycycorona
+- 云资源与管理:
+    - OCI 控制台:
+        - abbr: OCI
+          href: https://cloud.oracle.com/
     - Tailscale:
         - abbr: TS
           href: https://login.tailscale.com/admin/machines
+- AI 平台与工具:
+    - DeepSeek:
+        - abbr: DS
+          href: https://platform.deepseek.com/
+    - Google AI Studio:
+        - abbr: GAS
+          href: https://aistudio.google.com/
+    - MDI 图标:
+        - abbr: MDI
+          href: https://pictogrammers.com/library/mdi/
+- 核心代码仓库:
+    - GitHub:
+        - abbr: GH
+          href: https://github.com/ycycorona
+    - sub-pipe:
+        - abbr: SP
+          href: https://github.com/ycycorona/sub-pipe
+    - agent-runs:
+        - abbr: AR
+          href: https://github.com/ycycorona/agent-runs
+    - 115-util:
+        - abbr: 115
+          href: https://github.com/ycycorona/115-util
