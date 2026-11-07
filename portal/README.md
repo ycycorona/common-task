@@ -63,7 +63,7 @@ curl -sI http://127.0.0.1:8790/ | head -1               # 期望 200
 
 Portal 的「Farm PC 算力」分组链接到 `/farm-compute.html`，页面是 2026-11-07 实机核验快照，不是实时监控。在线服务为 CUDA UVR 人声分离（8703）、CUDA Qwen3-ASR-1.7B（8701）、CPU Qwen3-ForcedAligner-0.6B（8700）；orc-1 的 sub-pipe2（8875）已登记三项并启用 `--provider`，人声分离仍由每次运行的 `--separate-vocals` / `params.separate_vocals=true` 选择。
 
-同时记录未启动的 Bonsai 27B（预设仅本机9090）与 CosyVoice3（启动脚本预设8005）安装。没有为盘点启动它们，也不把安装目录当推理成功。UVR 无开机任务；ASR / 对齐有开机延迟2分钟任务，本轮未重启机器验证。共享 GPU 锁、idle25秒、地址、目录、认证与恢复边界见汇总页。密钥不进页面或配置，三个认证服务不设匿名 HTTP 状态灯，以免把401画成故障。
+同时记录未启动的 CosyVoice3（启动脚本预设8005）安装（原 Bonsai 27B 安装已清理）。没有为盘点启动它们，也不把安装目录当推理成功。UVR 无开机任务；ASR / 对齐有开机延迟2分钟任务，本轮未重启机器验证。共享 GPU 锁、idle25秒、地址、目录、认证与恢复边界见汇总页。密钥不进页面或配置，三个认证服务不设匿名 HTTP 状态灯，以免把401画成故障。
 
 本次变更的运行同步只复制涉及文件，保留运行目录专用 README 和容器生成文件；新增 public 挂载后在 `~/portal` 执行 `docker compose up -d --no-deps --pull never homepage`，无需更新镜像。
 

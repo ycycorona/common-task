@@ -29,7 +29,7 @@
   <header>
     <h1>Farm PC 算力服务</h1>
     <p class="muted">Windows 11 · RTX 3070 8 GB · Tailscale 100.68.205.95</p>
-    <p><span class="badge">3 项服务在线</span><span class="badge offline">2 项安装未启动</span></p>
+    <p><span class="badge">3 项服务在线</span><span class="badge offline">1 项安装未启动</span></p>
     <p class="muted">核验快照：2026-11-07。状态来自认证 health、Windows 监听进程、启动脚本和计划任务；本页不会自动探测。未向浏览器提供服务密钥。</p>
   </header>
 
@@ -66,11 +66,6 @@
 
   <section class="panel" aria-labelledby="installed-title">
     <h2 id="installed-title">其他已定位的算力安装</h2>
-    <article id="bonsai">
-      <h3>Bonsai 27B · 语言 / 视觉模型</h3>
-      <p><span class="badge offline">未启动</span><code>F:\app\Bonsai2</code> 保留 PrismML llama.cpp 和 <code>Ternary-Bonsai-2-27B-PTQ1_0</code> 模型、视觉投影。脚本预设仅监听 <code>127.0.0.1:9090</code>，提供 OpenAI 兼容接口；启动入口 <code>start-bonsai.ps1</code>，无开机自启。</p>
-      <p>本次没有 9090 监听或 llama-server 进程，未接入 sub-pipe2。该部署没有使用上方共享 GPU 锁，启动前需要安排显存，不能假定可与 ASR / UVR 同时驻留。本轮未启动或重测生成。</p>
-    </article>
     <article id="cosyvoice">
       <h3>CosyVoice3 · 语音合成</h3>
       <p><span class="badge offline">未启动</span><code>F:\app\cosyvoice3-0529</code> 有 WebUI、Python 环境与模型目录；启动脚本 <code>启动webui.bat</code> 指定 <code>Fun-CosyVoice3-0.5B</code> 和端口 <code>8005</code>。</p>

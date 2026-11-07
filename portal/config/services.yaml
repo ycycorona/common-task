@@ -53,6 +53,11 @@
         href: http://100.100.102.49:6768/
         description: ycyber-mac · 主力端 Orca Web IDE
         ping: http://100.100.102.49:6768/
+    - Orca（Grace Laptop）:
+        icon: mdi-laptop-windows
+        href: http://100.118.249.69:6768/
+        description: grace-laptop · Orca Web IDE
+        ping: http://100.118.249.69:6768/
     - Orca 桌面（VNC）:
         icon: mdi-monitor
         href: vnc://100.126.255.75:5900
@@ -61,6 +66,10 @@
         icon: mdi-remote-desktop
         href: rdp://100.68.205.95:3389
         description: farm-pc · Win11 RDP :3389 GPU 环境
+    - Grace Laptop 远程桌面:
+        icon: mdi-remote-desktop
+        href: rdp://100.118.249.69:3389
+        description: grace-laptop · Win11 RDP :3389
 
 - 网关与运维管控:
     - PVE 虚拟化控制台:
@@ -85,7 +94,7 @@
     - 算力服务总览:
         icon: mdi-server-network
         href: /farm-compute.html
-        description: 3 项在线服务 + 2 项未启动安装 · 2026-11-07 核验
+        description: 3 项在线服务 + 1 项未启动安装 · 2026-11-07 核验
     - UVR 人声分离:
         icon: mdi-waveform
         href: /farm-compute.html#uvr
@@ -98,10 +107,6 @@
         icon: mdi-timeline-text-outline
         href: /farm-compute.html#align
         description: ForcedAligner 0.6B · CPU · :8700 · 开机任务
-    - Bonsai 27B（未启动）:
-        icon: mdi-brain
-        href: /farm-compute.html#bonsai
-        description: 本地语言 / 视觉模型 · 127.0.0.1:9090
     - CosyVoice3（未启动）:
         icon: mdi-account-voice
         href: /farm-compute.html#cosyvoice
@@ -124,6 +129,10 @@
         icon: mdi-laptop
         href: ssh://100.100.102.49
         description: 主力开发机 · Orca server
+    - grace-laptop:
+        icon: mdi-laptop
+        href: ssh://100.118.249.69
+        description: Win11 · Grace 笔记本
     - bwg-us:
         icon: mdi-cloud-outline
         href: ssh://100.92.121.96

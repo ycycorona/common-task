@@ -13,7 +13,7 @@ layout:
     columns: 4
   开发环境与桌面:
     style: row
-    columns: 4
+    columns: 3
   网关与运维管控:
     style: row
     columns: 4
@@ -22,4 +22,4 @@ layout:
     columns: 3
   远程机器:
     style: row
-    columns: 5
+    columns: 6
