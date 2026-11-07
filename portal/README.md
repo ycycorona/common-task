@@ -1,6 +1,6 @@
 # 开发 Portal（Homepage）
 
-个人开发门户页：一个网页，聚合常用机器的 `ssh://` 入口、本机与远端服务（望楼、Orca、sub-pipe 案例台、magpie、Komari 监控、rigledger 台账）以及它们的状态灯。上游是 [gethomepage/homepage](https://github.com/gethomepage/homepage)（GPL-3.0），我们只提供配置。
+个人开发门户页：一个网页，聚合常用机器的 `ssh://` 入口、本机与远端服务（望楼、Orca、sub-pipe 案例台、magpie Web 管理、Komari 监控、rigledger 台账）以及它们的状态灯。上游是 [gethomepage/homepage](https://github.com/gethomepage/homepage)（GPL-3.0），我们只提供配置。
 
 ## 这份配置在哪跑
 
@@ -85,6 +85,5 @@ curl -sI http://127.0.0.1:8790/ | head -1               # 期望 200
 
 ## 未接入 / 待办
 
-- **magpie 网关与 magpie 管理两张卡片指向同一端口 3430**（前者只是历史入口，描述里的 401 其实是 Web 鉴权）。要合并就把网关改成 `http://100.126.255.75:3425/v1` 或直接删卡。
 - **澄流（115-util）**无常驻界面：AriaNg 只经 `bin/115web` 的临时 ssh 隧道 + 本机 8080 静态服务打开，不列入。
 - 可选：加 `iframe` widget 嵌 Komari 面板（`http://100.75.252.49:25774/`），替代「每台机器装 glances」。
