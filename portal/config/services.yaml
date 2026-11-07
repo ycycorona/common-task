@@ -131,7 +131,7 @@
     - vps_gem:
         icon: mdi-server-network-outline
         href: ssh://100.75.252.49
-        description: 俄罗斯 VPS · Komari 监控 / rigledger 宿主
+        description: 德国 VPS · Komari 监控 / rigledger 宿主
     - vps_jp:
         icon: mdi-server-network-outline
         href: ssh://100.84.228.71
