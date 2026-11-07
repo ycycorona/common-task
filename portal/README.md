@@ -81,8 +81,10 @@ curl -sI http://127.0.0.1:8790/ | head -1               # 期望 200
 
 - **没有登录**。仅靠 Tailscale 加密 + 本机 iptables 兜底。要认证就在前面套一层 Caddy `basic_auth`。
 - 需要密钥的 widget 走 `HOMEPAGE_VAR_*` 环境变量，不写进 `services.yaml`；当前没有任何带密钥的 widget。
+- magpie Web 管理（free-arm `:3430`）的 web key 在 free-arm 的 `~/.config/magpie/web.env`，不入 Git；浏览器首访带一次 `?k=<key>`，之后靠 400 天的 cookie 直接开根路径。
 
 ## 未接入 / 待办
 
+- **magpie 网关与 magpie 管理两张卡片指向同一端口 3430**（前者只是历史入口，描述里的 401 其实是 Web 鉴权）。要合并就把网关改成 `http://100.126.255.75:3425/v1` 或直接删卡。
 - **澄流（115-util）**无常驻界面：AriaNg 只经 `bin/115web` 的临时 ssh 隧道 + 本机 8080 静态服务打开，不列入。
 - 可选：加 `iframe` widget 嵌 Komari 面板（`http://100.75.252.49:25774/`），替代「每台机器装 glances」。
