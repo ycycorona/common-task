@@ -11,6 +11,9 @@ layout:
   开发服务:
     style: row
     columns: 4
+  Farm PC 算力:
+    style: row
+    columns: 3
   监控与台账:
     style: row
     columns: 4

@@ -8,6 +8,7 @@ services:
     pid: host
     volumes:
       - ./config:/app/config
+      - ./public/farm-compute.html:/app/public/farm-compute.html:ro
     environment:
       PORT: "8790"
       # 对外只经 tailnet 暴露：iptables 默认 REJECT，公网到不了 8790，和望楼 Caddy 同一个暴露面

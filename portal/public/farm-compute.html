@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Farm PC 算力服务 · 开发 Portal</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; }
+    body { max-width: 1080px; margin: auto; padding: 32px 20px 60px; line-height: 1.7; }
+    a { color: #7dd3fc; text-underline-offset: 3px; }
+    h1 { margin: 20px 0 8px; font-size: clamp(1.8rem, 4vw, 2.5rem); line-height: 1.3; }
+    h2 { margin: 0 0 12px; font-size: 1.3rem; }
+    h3 { margin-bottom: 4px; }
+    .muted { color: #a7b6ca; }
+    .panel { margin-top: 24px; padding: 24px; border: 1px solid #334155; border-radius: 12px; background: #172236; }
+    .scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 12px; border-bottom: 1px solid #334155; vertical-align: top; }
+    th { color: #cbd5e1; font-size: .9rem; }
+    code { font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+    pre { padding: 16px; background: #0f172a; border-radius: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .badge { display: inline-block; padding: 2px 10px; margin: 4px 8px 4px 0; border-radius: 20px; background: #164e43; color: #b6f4d6; font-size: .9rem; }
+    .offline { background: #394354; color: #e2e8f0; }
+    :target { scroll-margin-top: 20px; outline: 2px solid #7dd3fc; outline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <nav aria-label="导航"><a href="/">← 开发 Portal</a> · <a href="http://100.117.100.126:8875/docs">orc-1 sub-pipe2 接口文档</a></nav>
+  <header>
+    <h1>Farm PC 算力服务</h1>
+    <p class="muted">Windows 11 · RTX 3070 8 GB · Tailscale 100.68.205.95</p>
+    <p><span class="badge">3 项服务在线</span><span class="badge offline">2 项安装未启动</span></p>
+    <p class="muted">核验快照：2026-11-07。状态来自认证 health、Windows 监听进程、启动脚本和计划任务；本页不会自动探测。未向浏览器提供服务密钥。</p>
+  </header>
+
+  <section class="panel" aria-labelledby="active-title">
+    <h2 id="active-title">已接入 orc-1 的三项服务</h2>
+    <div class="scroll"><table>
+      <thead><tr><th scope="col">服务与模型</th><th scope="col">接口地址 / 设备</th><th scope="col">限制与启动</th></tr></thead>
+      <tbody>
+        <tr id="uvr"><th scope="row">UVR 人声分离<br><code>uvr-mdx-net-voc-ft</code><br><span class="muted">Kim Vocal 2</span></th><td><code>http://100.68.205.95:8703</code><br>CUDA / RTX 3070</td><td>每条 / 每请求最多 122 秒；16 kHz 单声道 PCM16，输入输出样本数相同。声明 reserved 显存 2293 MiB，另留 512 MiB。<strong>无开机自启任务</strong>，重启后手动启动。</td></tr>
+        <tr id="asr"><th scope="row">Qwen3 语音识别<br><code>qwen3-asr-1.7b</code></th><td><code>http://100.68.205.95:8701</code><br>CUDA / RTX 3070</td><td>中 / 日 / 英，支持上下文；单条最多 300 秒，每请求最多 600 秒；声明显存 5358 MiB。计划任务 <code>subpipe-farm-asr</code>，开机延迟 2 分钟。</td></tr>
+        <tr id="align"><th scope="row">Qwen3 强制对齐<br><code>qwen3-forced-aligner-0.6b</code></th><td><code>http://100.68.205.95:8700</code><br>CPU / 8 线程</td><td>中 / 日 / 英，80 ms 网格；单条最多 180 秒，每请求最多 600 秒。计划任务 <code>subpipe-farm-align</code>，开机延迟 2 分钟。</td></tr>
+      </tbody>
+    </table></div>
+    <p>三项服务均需 Bearer 认证，<code>GET /v1/health</code> 未带密钥返回 401 属正常行为。密钥仅由 orc-1 的受保护环境文件引用；Portal 不保存密钥、不配置匿名健康状态灯。</p>
+    <p>模型空闲 25 秒后退出子进程、释放资源，HTTP 监听继续在线。ASR 与 UVR 共用 <code>F:\subpipe-test\locks\cuda0.lock</code>，按锁串行使用 GPU；占用时另一服务返回 429 / Retry-After。</p>
+  </section>
+
+  <section class="panel" aria-labelledby="use-title">
+    <h2 id="use-title">orc-1 sub-pipe2 怎么使用</h2>
+    <p>控制面 <code>http://100.117.100.126:8875</code> 已启用 <code>serve --provider</code>，已登记 <code>farm-pc-uvr</code>、<code>farm-pc-asr</code>、<code>farm-pc-align</code>。本机不加载这些模型。</p>
+    <p>人声分离按运行选择，默认关闭。客户端使用 <code>--separate-vocals</code>；HTTP 创建运行时在 <code>params</code> 内传实际 JSON 布尔值：</p>
+    <pre><code>{"material_id":"&lt;素材 ID&gt;","language":"ja","until":"segments","params":{"separate_vocals":true}}</code></pre>
+    <p>开启后先分离为该运行的 vocals SOURCE，再做 VAD 和后续处理。此项免费；不自动授权转录或翻译的付费云调用。运行详情的 <code>source_kind</code> 应为 <code>vocals</code>。</p>
+    <p>核验：认证 health 三项 ready；10 秒真实 CUDA 请求为非 replay，输入 / 输出各 160,000 样本。服务端 HTTP 接线验证的具体运行见下方核验补记。</p>
+    <p id="verification" class="muted">2026-11-07 18:23 UTC 实测：通过 orc-1 的 POST /v1/runs 创建免费段表运行，370 秒素材分为 4 块，四次请求均由 farm-pc-uvr / CUDAExecutionProvider accepted；运行成功，source_kind=vocals，原素材哈希未变。总墙钟 62.222 秒，未发起付费执行。运行 ID：d70c0d706c874cbf998edfd68958d567。</p>
+  </section>
+
+  <section class="panel" aria-labelledby="ops-title">
+    <h2 id="ops-title">启动、日志与回滚</h2>
+    <p>Windows 服务目录分别是 <code>F:\subpipe-test\compute-uvr</code>、<code>compute-asr</code>、<code>compute-aligner</code>，各目录的 <code>serve.cmd</code> 为启动入口，日志为 <code>serve.out</code> / <code>serve.err</code>。脚本有端口护栏；已监听时返回 3 表示跳过重复启动。</p>
+    <p>UVR 源码：<code>F:\subpipe-test\releases\1c41732f-u7-runtime</code>；依赖环境：<code>F:\subpipe-test\releases\48f2df52-u7-runtime\compute\uvr\.venv</code>。Qwen 两项使用 <code>48f2df52-u7-runtime</code> core。与当前 dev 的算力服务实现相同，后续提交为验收文档。</p>
+    <p>配置和回滚说明以 sub-pipe 的 <code>docs/guide/sub-pipe-server-deployment.md</code> 为准。现有脚本备份位于 <code>F:\subpipe-test\deployment-backups\spec031-ctx_87be1cb6957d</code>；停服或回滚前先排空请求，保留模型、源码、环境与业务产物。ASR / 对齐计划任务已配置，但本轮未做整机重启验证。</p>
+  </section>
+
+  <section class="panel" aria-labelledby="installed-title">
+    <h2 id="installed-title">其他已定位的算力安装</h2>
+    <article id="bonsai">
+      <h3>Bonsai 27B · 语言 / 视觉模型</h3>
+      <p><span class="badge offline">未启动</span><code>F:\app\Bonsai2</code> 保留 PrismML llama.cpp 和 <code>Ternary-Bonsai-2-27B-PTQ1_0</code> 模型、视觉投影。脚本预设仅监听 <code>127.0.0.1:9090</code>，提供 OpenAI 兼容接口；启动入口 <code>start-bonsai.ps1</code>，无开机自启。</p>
+      <p>本次没有 9090 监听或 llama-server 进程，未接入 sub-pipe2。该部署没有使用上方共享 GPU 锁，启动前需要安排显存，不能假定可与 ASR / UVR 同时驻留。本轮未启动或重测生成。</p>
+    </article>
+    <article id="cosyvoice">
+      <h3>CosyVoice3 · 语音合成</h3>
+      <p><span class="badge offline">未启动</span><code>F:\app\cosyvoice3-0529</code> 有 WebUI、Python 环境与模型目录；启动脚本 <code>启动webui.bat</code> 指定 <code>Fun-CosyVoice3-0.5B</code> 和端口 <code>8005</code>。</p>
+      <p>本次没有 8005 监听或对应 Python 进程；未接入 sub-pipe2。仅确认安装目录和脚本存在，模型完整性、绑定地址、推理可用性与自启均未验证。另一个同名带 <code>(2)</code> 的目录为空，不算独立部署。</p>
+    </article>
+    <p class="muted">范围：本次 Windows 全部 TCP 监听、相关进程、部署目录、计划任务及已定位安装。WSL 当前没有运行中的发行版；未启动 WSL 或其他模型。magpie 是接口网关、Aria2 是下载服务，不列为本地模型算力服务。</p>
+  </section>
+</body>
+</html>

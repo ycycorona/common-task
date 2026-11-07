@@ -38,6 +38,37 @@
         href: http://100.126.255.75:3430/
         description: Web 管理 · 首访需 ?k= 参数
     # 澄流（115-util）没有常驻界面：AriaNg 只经 bin/115web 的临时 ssh 隧道 + 本机 8080 静态服务打开，故不列入
+    - sub-pipe2（orc-1）:
+        icon: mdi-subtitles-outline
+        href: http://100.117.100.126:8875/docs
+        description: 已接 Farm PC 分离 / ASR / 对齐 · 每运行选人声开关
+        ping: http://100.117.100.126:8875/v1/openapi.json
+
+- Farm PC 算力:
+    - 算力服务总览:
+        icon: mdi-server-network
+        href: /farm-compute.html
+        description: 3 项在线服务 + 2 项未启动安装 · 2026-11-07 核验
+    - UVR 人声分离:
+        icon: mdi-waveform
+        href: /farm-compute.html#uvr
+        description: Kim Vocal 2 · CUDA · :8703 · 无开机自启
+    - Qwen3 语音识别:
+        icon: mdi-microphone
+        href: /farm-compute.html#asr
+        description: ASR 1.7B · CUDA · :8701 · 开机任务
+    - Qwen3 强制对齐:
+        icon: mdi-timeline-text-outline
+        href: /farm-compute.html#align
+        description: ForcedAligner 0.6B · CPU · :8700 · 开机任务
+    - Bonsai 27B（未启动）:
+        icon: mdi-brain
+        href: /farm-compute.html#bonsai
+        description: 本地语言 / 视觉模型 · 127.0.0.1:9090
+    - CosyVoice3（未启动）:
+        icon: mdi-account-voice
+        href: /farm-compute.html#cosyvoice
+        description: Fun-CosyVoice3-0.5B · 语音合成 · 预设 :8005
 
 - 远程机器:
     - free-arm:
