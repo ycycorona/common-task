@@ -37,7 +37,6 @@
         icon: mdi-cog-outline
         href: http://100.126.255.75:3430/
         description: Web 管理 · 首访需 ?k= 参数
-        target: _blank  # 新标签打开，不动 Portal 自己这个页签
     # 澄流（115-util）没有常驻界面：AriaNg 只经 bin/115web 的临时 ssh 隧道 + 本机 8080 静态服务打开，故不列入
 
 - 远程机器:

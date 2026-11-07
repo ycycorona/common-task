@@ -39,7 +39,7 @@ curl -sI http://127.0.0.1:8790/ | head -1               # 期望 200
 | :--- | :--- |
 | `docker-compose.yml` | 容器定义：host 网络、`pid: host`、`PORT=8790`、`HOMEPAGE_ALLOWED_HOSTS` |
 | `config/services.yaml` | 入口分组：望楼与编排 / 开发服务 / 监控与台账 / 远程机器 |
-| `config/settings.yaml` | 主题、状态点样式、分组布局（`layout` 的键必须与 `services.yaml` 的分组名一致） |
+| `config/settings.yaml` | 主题、状态点样式、分组布局（`layout` 的键必须与 `services.yaml` 的分组名一致）、`target: _blank` 让所有入口都开新标签、Portal 页签留原地 |
 | `config/widgets.yaml` | 左上角本机 CPU / 内存 / 磁盘 / uptime + 时钟 |
 | `config/bookmarks.yaml` | 底部常用链接 |
 | `config/custom.js` | 按 UA 改写 Orca 卡片的跳转（见下） |
@@ -54,7 +54,6 @@ curl -sI http://127.0.0.1:8790/ | head -1               # 期望 200
         href: http://<host>:<port>/
         description: 一句话
         ping: http://<host>:<port>/   # 可选：有这一行才出绿/红状态点
-        target: _blank             # 可选：新标签打开，不动本站页签（全局默认是 settings.yaml 里的 _self）
 ```
 
 新分组要同时在 `config/settings.yaml` 的 `layout` 里加同名键，否则不显示。

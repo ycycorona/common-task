@@ -3,7 +3,7 @@ theme: dark
 color: slate
 headerStyle: clean
 statusStyle: dot
-target: _self
+target: _blank  # 所有入口都在新标签打开，Portal 自己这个页签留在原地
 layout:
   望楼与编排:
     style: row
