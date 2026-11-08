@@ -38,6 +38,7 @@ pip install -r requirements.txt
 | `tools/` | 小工具：Codex 通知钩子、远程目录同步 |
 | `devtools/` | 仓库自身的文档校验（`check_docs.sh` + 自检） |
 | `devps/` | 孤儿开发进程检测/停止（macOS，零依赖） |
+| `monitoring/` | Komari 离线/磁盘告警（零依赖，跑在监控宿主上） |
 | `portal/` | 个人开发门户站（free-arm 上的 Homepage 配置：机器与服务入口、状态灯、平台深链） |
 | `ai-compact/` | AI Agent 自动压缩阈值的探测与设置 |
 | `archives/` | 一次性/归档任务（荷兰超市宣传册等） |
@@ -278,6 +279,9 @@ python3 ai-compact/ai_compact.py verify -a codex --expect 300000
     自检 `bash devtools/test_check_docs.sh`。
 -   **`orca-server/update-orca.sh`**、**`orca-windows/update-orca.cmd`**：Orca 无头服务端的平滑更新
     （Linux ARM64 / Windows），说明见各自目录的 README。
+-   **`monitoring/komari_alert.py`**：轮询 Komari 面板，节点掉线或磁盘超阈值时发一条通知，只在状态
+    变化时发（去抖靠本地状态文件）。部署在监控宿主 `/opt/komari-alert/`，配 `komari-alert.timer` 每 5 分钟跑一次；
+    `--dry-run` 只打印不发，自检 `python3 monitoring/test_komari_alert.py`。
 -   **`zed-defaults/zeddefaults.swift`**：把 macOS 默认程序从 VS Code 换成 Zed，
     `zeddefaults selftest|snapshot|apply|revert|list`，说明见 `zed-defaults/README.md`。
 
