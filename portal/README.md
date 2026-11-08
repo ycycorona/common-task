@@ -14,11 +14,13 @@
 **本目录是配置的唯一来源**，`~/portal` 只是运行副本。改完在这里提交，再同步过去：
 
 ```sh
-rsync -a --delete ~/orca_pro/common-task/portal/ ~/portal/
+rsync -a --delete --exclude=config/logs ~/orca_pro/common-task/portal/ ~/portal/
 cd ~/portal && docker compose up -d          # 首次；之后 yaml 会自动热重载
 ```
 
-`--delete` 会删掉 `~/portal` 里容器自动生成的东西（`config/logs/`、空的 `custom.css`、`docker.yaml` 等），容器下次启动会重新生成，因此同步后跟一次 `up -d` 最省事。
+`--delete` 会删掉 `~/portal` 里容器自动生成的东西（空的 `custom.css`、`docker.yaml`、`kubernetes.yaml` 等），容器下次启动会重新生成，因此同步后跟一次 `up -d` 最省事。
+
+**必须 `--exclude=config/logs`，不要用 sudo。** 容器没有配 `user:`，以镜像内 uid 1000 写 `./config`（本机这个 uid 是 `opc`，登录用户 `ubuntu` 是 1001），`config/logs/` 因此不属于 `ubuntu`；`--delete` 删目录内容要目标目录的写权限，会以 `unlink(config/logs/homepage.log): Permission denied`、exit 23 失败。排除这一项即可，其余容器生成文件在 `ubuntu` 可写的 `config/` 下，`--delete` 照常删除。用 sudo 反而会让后续文件属主混成 root。
 
 运行目录另有一份**本机操作贴士** `~/portal/README.md`（常用命令、目录分工、哪些文件是自动生成的空壳），读者是「此刻在这台机器上操作的人」，不随本文件同步。本文件是事实源与换机手册。
 
