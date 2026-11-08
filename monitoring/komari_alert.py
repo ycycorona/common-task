@@ -39,6 +39,7 @@ import time
 import urllib.error
 import urllib.request
 from email.message import EmailMessage
+from email.utils import formatdate, make_msgid
 from http.cookiejar import CookieJar
 from pathlib import Path
 
@@ -189,6 +190,18 @@ def smtp_settings(channel: dict) -> dict:
     return settings
 
 
+def build_message(subject: str, body: str, mail: dict) -> EmailMessage:
+    """Date 与 Message-ID 必须自己加：缺了它们 Gmail 该账号发出的信更容易被判进垃圾箱。"""
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = mail["from"]
+    msg["To"] = ", ".join(mail["to"])
+    msg["Date"] = formatdate(localtime=False)
+    msg["Message-ID"] = make_msgid(domain=mail["from"].split("@")[-1])
+    msg.set_content(body)
+    return msg
+
+
 def notify(cfg: dict, subject: str, body: str, dry_run: bool) -> None:
     channel = cfg["notify"]
     kind = channel.get("kind", "stdout")
@@ -199,11 +212,7 @@ def notify(cfg: dict, subject: str, body: str, dry_run: bool) -> None:
         mail = smtp_settings(channel)
         if not (mail["user"] and mail["password"] and mail["to"]):
             raise SystemExit("SMTP 未配置完整（user/password/to）")
-        msg = EmailMessage()
-        msg["Subject"] = subject
-        msg["From"] = mail["from"]
-        msg["To"] = ", ".join(mail["to"])
-        msg.set_content(body)
+        msg = build_message(subject, body, mail)
         ctx = ssl.create_default_context()
         if mail["starttls"]:
             with smtplib.SMTP(mail["host"], mail["port"], timeout=30) as smtp:

@@ -86,4 +86,8 @@ mail = ka.smtp_settings({"kind": "smtp", "env_file": env.name, "from": "alert@ex
 assert mail["from"] == "alert@example.com", mail
 Path(env.name).unlink()
 
+# 10. 邮件头必须自带 Date 与 Message-ID（Gmail 判垃圾邮件的直接因素）
+msg = ka.build_message("s", "b", {"from": "bot@example.com", "to": ["a@example.com"]})
+assert msg["Date"] and msg["Message-ID"].startswith("<") and "@example.com>" in msg["Message-ID"], msg.items()
+
 print("komari_alert self-check ok")
