@@ -41,6 +41,11 @@
         href: http://100.89.79.120:5244/
         description: mini-pve-nas · 115 与本地存储聚合
         ping: http://100.89.79.120:5244/
+    - 荷兰超市优惠:
+        icon: mdi-ticket-percent-outline
+        href: http://100.75.252.49/
+        description: vps_gem · 五家超市优惠采集与展示（Tailnet，数据时间见页内）
+        ping: http://100.75.252.49/
 
 - 开发环境与桌面:
     - Orca（free-arm）:
