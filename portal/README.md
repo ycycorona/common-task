@@ -81,6 +81,12 @@ Portal 的「Farm PC 算力」分组链接到 `/farm-compute.html`，页面是 2
 
 限制：只能进 App 首页，进不了具体 workspace / 会话——那需要桌面 UI 现生成的一次性配对码，不能静态化。手机未装 App 时点卡片无反应（tooltip 已注明）。
 
+## 远程机器条目的约定
+
+`ssh://` 链接指向 **Tailscale 地址**，不通公网；`vps_gem`、`bwg_us`、`vps_jp` 在 free-arm 的 `~/.ssh/config` 里都有同名别名，直连即可。两台 VPS 的 sshd 不在 22 端口：`bwg-us`、`vps_jp` 都是 **:28010**，所以链接写成 `ssh://root@<tailscale-ip>:28010`；`vps_gem` 仍是 22。
+
+`bwg-us` / `vps_jp` 的 `root` 只授权了 Mac 侧的 `id_ed25519_vps` 和 free-arm 的公钥（后者带 `from="100.126.255.75"`，即只允许从 free-arm 的 Tailscale 地址登录）。所以这些机器改为直连公网 IP 会认证失败，这是故意的，不是故障。
+
 ## 两个必须保留的设置（踩过的坑）
 
 1. **`network_mode: host`**。bridge 网络下容器访问不到本机服务：`docker0 → 宿主端口` 的流量进 INPUT 链，被本机「只放行 22 / 28010」的 iptables 规则 REJECT，望楼与 Orca 的 `ping` 全部失败。

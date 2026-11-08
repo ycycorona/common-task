@@ -79,7 +79,7 @@
     - 主机监控（Komari）:
         icon: mdi-chart-line
         href: http://100.75.252.49:25774/
-        description: vps_gem · 各机 CPU/内存/网络监控
+        description: vps_gem · 7 台机器 CPU/内存/网络监控（含 GPU、Windows 两台）
         ping: http://100.75.252.49:25774/
     - magpie 管理（free-arm）:
         icon: mdi-cog-outline
@@ -135,16 +135,16 @@
         description: Win11 · Grace 笔记本
     - bwg-us:
         icon: mdi-cloud-outline
-        href: ssh://100.92.121.96
-        description: 搬瓦工 美西 VPS · 出口与备用节点
+        href: ssh://root@100.92.121.96:28010
+        description: 搬瓦工 美西 VPS · 出口与备用节点 · free-arm 别名 bwg_us · sshd :28010（仅 Tailscale）
     - vps_gem:
         icon: mdi-server-network-outline
         href: ssh://100.75.252.49
-        description: 德国 VPS · Komari 监控 / rigledger 宿主
+        description: 德国 VPS · Komari 监控 / rigledger 宿主 · free-arm 别名 vps_gem · sshd :22（仅 Tailscale）
     - vps_jp:
         icon: mdi-server-network-outline
-        href: ssh://100.84.228.71
-        description: 日本 VPS · 备用节点
+        href: ssh://root@100.84.228.71:28010
+        description: 日本 VPS · 备用节点 · free-arm 别名 vps_jp · sshd :28010（仅 Tailscale）
     - ycy-mini-pve:
         icon: mdi-server-security
         href: ssh://100.92.84.2
