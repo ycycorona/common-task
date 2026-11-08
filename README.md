@@ -281,6 +281,7 @@ python3 ai-compact/ai_compact.py verify -a codex --expect 300000
     （Linux ARM64 / Windows），说明见各自目录的 README。
 -   **`monitoring/komari_alert.py`**：轮询 Komari 面板，节点掉线或磁盘超阈值时发一条通知，只在状态
     变化时发（去抖靠本地状态文件）。部署在监控宿主 `/opt/komari-alert/`，配 `komari-alert.timer` 每 5 分钟跑一次；
+    邮件频道复用现成的 `/opt/mdp/.env.push`（`PUSH_SMTP_*` / `PUSH_TO`），不另存口令。
     `--dry-run` 只打印不发，自检 `python3 monitoring/test_komari_alert.py`。
 -   **`zed-defaults/zeddefaults.swift`**：把 macOS 默认程序从 VS Code 换成 Zed，
     `zeddefaults selftest|snapshot|apply|revert|list`，说明见 `zed-defaults/README.md`。

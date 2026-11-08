@@ -21,7 +21,9 @@ Komari 1.6.0 自带的通知只有「离线 / 流量定时报告 / 到期」三�
     }
 
 `notify.kind` 可选 `smtp`、`webhook`（POST JSON {subject, body} 到 `url`，可带 `headers`）
-或 `stdout`（只打印，用于试运行）。`remind_hours` 为 0 表示同一故障不重复提醒。
+或 `stdout`（只打印，用于试运行）。SMTP 频道支持 `env_file`，从现成的 `.env` 读
+`PUSH_SMTP_USER` / `PUSH_SMTP_PASSWORD` / `PUSH_TO`（可选 `PUSH_SMTP_HOST` / `PUSH_SMTP_PORT`），
+这样不必把同一份口令再存一遍。`remind_hours` 为 0 表示同一故障不重复提醒。
 
 退出码：0 正常（含「有告警并已发出」）；2 面板登录或取数失败；3 通知发送失败（状态不推进，下轮重试）；4 配置不完整。
 """
@@ -159,6 +161,34 @@ def plan(events: list[dict], state: dict, now: float, remind_hours: float) -> tu
     return sends, new_state
 
 
+def smtp_settings(channel: dict) -> dict:
+    """合并频道配置与可选的 env_file（复用已有投递凭据，避免重复存口令）。"""
+    settings = {
+        "host": channel.get("host", "smtp.gmail.com"),
+        "port": int(channel.get("port", 587)),
+        "starttls": channel.get("starttls", True),
+        "user": channel.get("user", ""),
+        "password": channel.get("password", ""),
+        "to": list(channel.get("to") or []),
+    }
+    env_file = channel.get("env_file")
+    if env_file:
+        values = {}
+        for line in Path(env_file).read_text().splitlines():
+            key, sep, value = line.partition("=")
+            if sep and not key.lstrip().startswith("#"):
+                values[key.strip()] = value.strip()
+        settings["user"] = values.get("PUSH_SMTP_USER", settings["user"])
+        settings["password"] = values.get("PUSH_SMTP_PASSWORD", settings["password"]).replace(" ", "")
+        settings["host"] = values.get("PUSH_SMTP_HOST", settings["host"])
+        settings["port"] = int(values.get("PUSH_SMTP_PORT", settings["port"]))
+        recipients = values.get("PUSH_TO")
+        if recipients:
+            settings["to"] = [a.strip() for a in recipients.split(",") if a.strip()]
+    settings["from"] = channel.get("from") or settings["user"]
+    return settings
+
+
 def notify(cfg: dict, subject: str, body: str, dry_run: bool) -> None:
     channel = cfg["notify"]
     kind = channel.get("kind", "stdout")
@@ -166,22 +196,23 @@ def notify(cfg: dict, subject: str, body: str, dry_run: bool) -> None:
         print(f"--- {subject}\n{body}")
         return
     if kind == "smtp":
+        mail = smtp_settings(channel)
+        if not (mail["user"] and mail["password"] and mail["to"]):
+            raise SystemExit("SMTP 未配置完整（user/password/to）")
         msg = EmailMessage()
         msg["Subject"] = subject
-        msg["From"] = channel["from"]
-        msg["To"] = ", ".join(channel["to"])
+        msg["From"] = mail["from"]
+        msg["To"] = ", ".join(mail["to"])
         msg.set_content(body)
         ctx = ssl.create_default_context()
-        if channel.get("starttls", True):
-            with smtplib.SMTP(channel["host"], channel.get("port", 587), timeout=30) as smtp:
+        if mail["starttls"]:
+            with smtplib.SMTP(mail["host"], mail["port"], timeout=30) as smtp:
                 smtp.starttls(context=ctx)
-                if channel.get("user"):
-                    smtp.login(channel["user"], channel["password"])
+                smtp.login(mail["user"], mail["password"])
                 smtp.send_message(msg)
         else:
-            with smtplib.SMTP_SSL(channel["host"], channel.get("port", 465), timeout=30, context=ctx) as smtp:
-                if channel.get("user"):
-                    smtp.login(channel["user"], channel["password"])
+            with smtplib.SMTP_SSL(mail["host"], mail["port"], timeout=30, context=ctx) as smtp:
+                smtp.login(mail["user"], mail["password"])
                 smtp.send_message(msg)
         return
     if kind == "webhook":

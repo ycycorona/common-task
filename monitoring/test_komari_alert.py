@@ -70,4 +70,20 @@ assert ka.parse_time("2026-11-08T17:56:23.123456789Z") == 1794160583.0
 # 8. stdout 频道在 dry-run 下不写状态（由 main 保证），notify 打印不抛异常
 ka.notify({"notify": {"kind": "stdout"}}, "subject", "body", dry_run=True)
 
+# 9. SMTP 频道可复用已有 .env（避免重复存口令），口令里的空格会被去掉
+import tempfile
+
+env = tempfile.NamedTemporaryFile("w", suffix=".env", delete=False)
+env.write("PUSH_SMTP_USER=bot@example.com\nPUSH_SMTP_PASSWORD=abcd efgh ijkl mnop\nPUSH_TO=a@example.com,b@example.com\n")
+env.close()
+mail = ka.smtp_settings({"kind": "smtp", "env_file": env.name})
+assert mail["user"] == "bot@example.com", mail
+assert mail["password"] == "abcdefghijklmnop", mail
+assert mail["to"] == ["a@example.com", "b@example.com"], mail
+assert mail["from"] == "bot@example.com" and mail["host"] == "smtp.gmail.com" and mail["port"] == 587, mail
+# 频道里显式给的 from 优先于 user
+mail = ka.smtp_settings({"kind": "smtp", "env_file": env.name, "from": "alert@example.com"})
+assert mail["from"] == "alert@example.com", mail
+Path(env.name).unlink()
+
 print("komari_alert self-check ok")
