@@ -17,6 +17,17 @@
 4. **会话保护机制**：默认只更新程序文件，不强行重启后台服务；仅在显式传入 `--restart` 时才平滑重载守护进程并进行 200 OK 健康检查（本地已是最新版本时也会照此重启）。
 5. **沙箱权限修复**：AppImage 以普通用户解包会丢掉 `chrome-sandbox` 的 setuid，Electron 启动即 FATAL。切换目录后脚本会用 `sudo chown root:root` + `chmod 4755` 重设，缺少免密 sudo 会直接报错退出。
 
+## 两种部署形态
+
+同一个 `~/.config/orca` 只允许一个所有者（Electron 单实例锁），所以一台机器只启用一种形态：
+
+| 形态 | 启用的单元 | `--restart` 的重启对象 |
+| :--- | :--- | :--- |
+| 桌面（远程桌面可见） | `orca-xvfb` / `orca-wm` / `orca-desktop` / `orca-vnc`（user） | `systemctl --user restart orca-desktop.service` |
+| 无头 serve | `orca-serve.service`（system） | `pkill … serve` 后 `nohup … serve` |
+
+脚本按 `systemctl --user is-enabled orca-desktop.service` 判定形态。桌面形态下再起 headless serve 会抢不到锁，还会自建一块没人看的 `Xvfb :99`，导致窗口和 VNC 的显示号错位（`窗口在 :99、VNC 在 :103`）。自检：`./test_restart_mode.sh`（桩掉 systemctl/pkill/curl，不下载、不重启）。
+
 ## 使用方法
 
 ### 1. 仅下载更新核心文件（不中断当前会话）

@@ -15,6 +15,10 @@ PORT="${PORT:-6768}"
 LOG_FILE="${ORCA_DIR}/logs/daemon.log"
 CONFIG_LOG_FILE="/home/ubuntu/.config/orca/logs/daemon.log"
 
+# systemctl --user 需要用户总线；裸 SSH / cron 环境里可能没设，桌面形态判定靠它
+: "${XDG_RUNTIME_DIR:=/run/user/$(id -u)}"
+export XDG_RUNTIME_DIR
+
 # 颜色输出
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -103,19 +107,27 @@ restart_orca() {
     error "检测到脚本跑在 Orca 里（内置终端或 Orca 派生的进程）：pkill 会先杀掉脚本自己，启动新进程那步永远执行不到。请从 SSH 会话运行。"
   fi
 
-  warn "正在重启 Orca 守护进程..."
+  # 同一台机器只允许一种形态持有 ~/.config/orca 的单实例锁。
+  # 桌面形态下起 headless serve 会抢不到锁，还会自建一块没人看的 Xvfb（历史上就是这样出现
+  # “窗口在 :99、VNC 在 :103”的错位），所以按已启用的单元决定重启对象。
+  if systemctl --user is-enabled orca-desktop.service >/dev/null 2>&1; then
+    info "检测到桌面形态（orca-desktop.service 已启用），重启该用户单元"
+    systemctl --user restart orca-desktop.service || error "orca-desktop.service 重启失败"
+  else
+    warn "正在重启 Orca 守护进程..."
 
-  pkill -f "out/cli/index.js serve" 2>/dev/null || true
-  pkill -f "orcad-server.js" 2>/dev/null || true
-  sleep 2
+    pkill -f "out/cli/index.js serve" 2>/dev/null || true
+    pkill -f "orcad-server.js" 2>/dev/null || true
+    sleep 2
 
-  mkdir -p "$(dirname "${CONFIG_LOG_FILE}")"
+    mkdir -p "$(dirname "${CONFIG_LOG_FILE}")"
 
-  info "启动新版 Orca 守护服务..."
-  nohup "${CURRENT_SQUASHFS}/orca-ide" \
-    "${CURRENT_SQUASHFS}/resources/app.asar.unpacked/out/cli/index.js" \
-    serve --port "${PORT}" --pairing-address "${PAIRING_IP}" \
-    > "${CONFIG_LOG_FILE}" 2>&1 &
+    info "启动新版 Orca 守护服务..."
+    nohup "${CURRENT_SQUASHFS}/orca-ide" \
+      "${CURRENT_SQUASHFS}/resources/app.asar.unpacked/out/cli/index.js" \
+      serve --port "${PORT}" --pairing-address "${PAIRING_IP}" \
+      > "${CONFIG_LOG_FILE}" 2>&1 &
+  fi
 
   info "等待服务就绪校验..."
   SUCCESS=false
@@ -129,7 +141,10 @@ restart_orca() {
 
   if [[ "${SUCCESS}" == "true" ]]; then
     success "Orca 服务已成功重启并就绪！(端口: ${PORT})"
-    NEW_PID=$(pgrep -f "out/cli/index.js serve" | head -n 1 || echo "未知")
+    NEW_PID=$(systemctl --user show orca-desktop.service -p MainPID --value 2>/dev/null || true)
+    if ! [[ "${NEW_PID:-0}" =~ ^[1-9][0-9]*$ ]]; then
+      NEW_PID=$(pgrep -f "out/cli/index.js serve" | head -n 1 || echo "未知")
+    fi
     info "当前服务 PID: ${NEW_PID}"
   else
     error "服务未在 15s 内响应 200 OK，请检查日志: ${CONFIG_LOG_FILE}"
@@ -240,5 +255,8 @@ else
   echo -e ""
   echo -e "或者下次直接带 --restart 参数运行更新脚本："
   echo -e "  ${BLUE}${ORCA_DIR}/update-orca.sh --restart${NC}"
+  echo -e ""
+  echo -e "桌面形态（orca-desktop.service 已启用）请改用用户单元重启，不要用上面的 serve 命令："
+  echo -e "  ${GREEN}systemctl --user restart orca-desktop.service${NC}"
   echo -e "${YELLOW}================================================================${NC}"
 fi
