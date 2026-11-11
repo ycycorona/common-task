@@ -26,7 +26,7 @@
 | 桌面（远程桌面可见） | `orca-xvfb` / `orca-wm` / `orca-desktop` / `orca-vnc`（user） | `systemctl --user restart orca-desktop.service` |
 | 无头 serve | `orca-serve.service`（system） | `pkill … serve` 后 `nohup … serve` |
 
-脚本按 `systemctl --user is-enabled orca-desktop.service` 判定形态。桌面形态下再起 headless serve 会抢不到锁，还会自建一块没人看的 `Xvfb :99`，导致窗口和 VNC 的显示号错位（`窗口在 :99、VNC 在 :103`）。自检：`./test_restart_mode.sh`（桩掉 systemctl/pkill/curl，不下载、不重启）。
+脚本按 `systemctl --user is-enabled` 或 `is-active` 判定形态（手动 `start` 过、或临时 `disable` 过的桌面实例也要认得）；`systemctl --user` 本身不可用时直接报错退出，不会静默降级到 headless。桌面形态下再起 headless serve 会抢不到锁，还会自建一块没人看的 `Xvfb :99`，导致窗口和 VNC 的显示号错位（`窗口在 :99、VNC 在 :103`）。就绪检查也分形态：桌面形态除 `:6768` 返回 200 外，还要求 `orca-desktop` 处于 active（单独一个 200 可能是别的 serve 实例答的）。自检：`./test_restart_mode.sh`（四个用例：已启用桌面 / 仅正在运行 / 只有无头 / 用户总线不可达；桩掉 systemctl/pkill/nohup/curl，不下载、不重启）。
 
 ## 使用方法
 

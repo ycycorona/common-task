@@ -102,16 +102,36 @@ running_inside_orca() {
   return 1
 }
 
+# systemctl --user 能不能用。不可用时无法判定形态，绝不能落到 headless 分支：
+# 那会去抢 ~/.config/orca 的单实例锁，重演「窗口在 :99、VNC 在 :103」的错位。
+user_bus_state() {
+  local out
+  out=$(systemctl --user is-system-running 2>&1) || true
+  case "${out}" in
+    running|degraded|starting|initializing|maintenance) echo ok ;;
+    *) echo "${out:-unknown}" ;;
+  esac
+}
+
 restart_orca() {
   if running_inside_orca; then
     error "检测到脚本跑在 Orca 里（内置终端或 Orca 派生的进程）：pkill 会先杀掉脚本自己，启动新进程那步永远执行不到。请从 SSH 会话运行。"
   fi
 
+  local bus
+  bus=$(user_bus_state)
+  if [[ "${bus}" != "ok" ]]; then
+    error "systemctl --user 不可用（${bus}）：无法判定桌面/无头形态。拒绝重启，以免误起 headless serve 抢锁。"
+  fi
+
   # 同一台机器只允许一种形态持有 ~/.config/orca 的单实例锁。
-  # 桌面形态下起 headless serve 会抢不到锁，还会自建一块没人看的 Xvfb（历史上就是这样出现
-  # “窗口在 :99、VNC 在 :103”的错位），所以按已启用的单元决定重启对象。
-  if systemctl --user is-enabled orca-desktop.service >/dev/null 2>&1; then
-    info "检测到桌面形态（orca-desktop.service 已启用），重启该用户单元"
+  # is-enabled 与 is-active 不等价：手动 start 过、或临时 disable 过的桌面实例只满足后者，
+  # 只看 is-enabled 会把它当无头机器，于是起 serve 抢锁、自建没人看的 Xvfb。
+  ORCA_MODE=headless
+  if systemctl --user is-enabled orca-desktop.service >/dev/null 2>&1 \
+    || systemctl --user is-active orca-desktop.service >/dev/null 2>&1; then
+    ORCA_MODE=desktop
+    info "检测到桌面形态（orca-desktop.service 已启用或正在运行），重启该用户单元"
     systemctl --user restart orca-desktop.service || error "orca-desktop.service 重启失败"
   else
     warn "正在重启 Orca 守护进程..."
@@ -129,9 +149,14 @@ restart_orca() {
       > "${CONFIG_LOG_FILE}" 2>&1 &
   fi
 
-  info "等待服务就绪校验..."
+  info "等待服务就绪校验（形态: ${ORCA_MODE}）..."
   SUCCESS=false
   for i in {1..15}; do
+    # 桌面形态下 :6768 的 200 不能单独作为证据：另一个 serve 实例也可能占着这个端口。
+    if [[ "${ORCA_MODE}" == "desktop" ]] && ! systemctl --user is-active orca-desktop.service >/dev/null 2>&1; then
+      sleep 1
+      continue
+    fi
     if curl -s -I "http://127.0.0.1:${PORT}/web-index.html" | grep -q "200 OK"; then
       SUCCESS=true
       break
