@@ -2,18 +2,19 @@
 
 Playbook revision: 2026.11.06-1
 Playbook commit: 2f095bb8aa947ebdeb67741776cbfe03970f6dca (`ycycorona/y-agent-toolkit` master)
+Scoped sync: 2026.11.12-6 (INV-15 only; source merge pending)
+Scoped playbook commit: 4c666d8266292c9eca95c5a59c076e2bd1f29183
 Mode: adapted；Run Tracker slot 按 pointer 记录
-Synced: 2026-11-07
-By: Codex · SPEC-001 T4 同步 · unknown
-Last Validated: 2026-11-07（规则目录与编排适用性）
+Synced: 2026-11-12
+By: Codex · scoped INV-15 sync · unknown
+Last Validated: 2026-11-12 (INV-15 only)
 
 ## What was read
 
-- 固定已发布 playbook 的 USAGE、同步步骤、SYNC 模板、Run Tracker 模型与
-  `2026.10.27-7` 之后至 `2026.11.06-1` 的全部 CHANGELOG 条目。
-- 本仓库 AGENTS、现行适配规则与文档目录；通过文件清单和文本搜索确认没有编排规则、
-  Run 写入入口或恢复快照定义。普通工作仍按本仓库规则执行。
-- 本次仅同步 Run Tracker 适用性与记录；不引入编排脚手架。
+- 用户要求「并逐仓适配同步」；本轮只适配决策请求规则 INV-15。
+- 完整基线仍为 `2026.11.06-1`，原 Playbook commit 字段对应该基线；本轮来源为上列 scoped commit，尚待源规则本地合并。
+- 已读源 USAGE、同步要求、CHANGELOG 与决策规则；已读本仓库 Agent 入口、现行同步记录及相关工作流和文档约定。
+- 本次为可审阅的工作分支草稿；其余规则、既有例外和未决项保留，未进行全版本同步或产品验收。
 
 ## Differences
 
@@ -68,10 +69,13 @@ Last Validated: 2026-11-07（规则目录与编排适用性）
 
 ## Open items
 
+- INV-15 is prepared on this work branch; source merge and target landing remain pending authorization.
+  Older baseline gaps are retained; the full Playbook revision is intentionally unchanged.
 - Run Tracker 同步无未决项；未重写历史或引入项目注册。
 
 ## Self-check
 
+- [x] INV-15: `AGENTS.md`; options, own recommendation, reason/trade-off, mid-task and closeout, missing information and one viable option checked.
 - [x] INV-1 … INV-14 逐条核对（适用项落在 AGENTS.md / 文档规范，不适用项在 Dropped 说明原因）
 - [x] 无残留的适配占位符或 TODO
 - [x] adapter slot 填的是真实路径与命令

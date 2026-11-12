@@ -13,6 +13,7 @@
 
 ## Workflow and authorization
 
+- 请用户决策前，每个 Agent 先列出可执行选项，恰好标出一个「★ 推荐」，说明自己的推荐理由及主要代价或风险，再请用户选择；任务中途与收尾都适用。信息不足时说明缺口并推荐下一步调查动作；只有一个可行方案时说明原因，不凑选项。
 - 只实现用户明确要求的范围。验收标准、issue 指派或"就绪"状态本身不授权额外重构、删除或"顺手改进"。
 - 小改动用最小文档：单文件脚本的用法写在脚本头部注释或根 README；不为流程完整性创建没有独立价值的文档。新建或改动 `docs/`、`archives/` 里的文档时按 [docs/agents/documentation-conventions.md](docs/agents/documentation-conventions.md)（角色、最小元数据、`Last Validated`）。
 - 跨文件或引入新依赖的改动，先在响应里说明取舍再动手。
