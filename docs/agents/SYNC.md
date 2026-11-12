@@ -2,8 +2,8 @@
 
 Playbook revision: 2026.11.06-1
 Playbook commit: 2f095bb8aa947ebdeb67741776cbfe03970f6dca (`ycycorona/y-agent-toolkit` master)
-Scoped sync: 2026.11.12-6 (INV-15 only; source merge pending)
-Scoped playbook commit: 4c666d8266292c9eca95c5a59c076e2bd1f29183
+Scoped sync: 2026.11.12-6 (INV-15 only; target landing pending)
+Scoped playbook commit: 23bc54c80f50e4be668d635c585f5f20bf59679f
 Mode: adapted；Run Tracker slot 按 pointer 记录
 Synced: 2026-11-12
 By: Codex · scoped INV-15 sync · unknown
@@ -12,9 +12,9 @@ Last Validated: 2026-11-12 (INV-15 only)
 ## What was read
 
 - 用户要求「并逐仓适配同步」；本轮只适配决策请求规则 INV-15。
-- 完整基线仍为 `2026.11.06-1`，原 Playbook commit 字段对应该基线；本轮来源为上列 scoped commit，尚待源规则本地合并。
+- 完整基线仍为 `2026.11.06-1`，原 Playbook commit 字段对应该基线；本轮来源为上列 scoped commit，该固定提交已合入源仓库本地 master（未推送）。
 - 已读源 USAGE、同步要求、CHANGELOG 与决策规则；已读本仓库 Agent 入口、现行同步记录及相关工作流和文档约定。
-- 本次为可审阅的工作分支草稿；其余规则、既有例外和未决项保留，未进行全版本同步或产品验收。
+- 本次为已对照固定源版本核对的范围同步，目标分支合并待授权；其余规则、既有例外和未决项保留，未进行全版本同步或产品验收。
 
 ## Differences
 
@@ -69,7 +69,7 @@ Last Validated: 2026-11-12 (INV-15 only)
 
 ## Open items
 
-- INV-15 is prepared on this work branch; source merge and target landing remain pending authorization.
+- INV-15 is verified on this work branch against the locally merged source; target landing remains pending authorization.
   Older baseline gaps are retained; the full Playbook revision is intentionally unchanged.
 - Run Tracker 同步无未决项；未重写历史或引入项目注册。
 
