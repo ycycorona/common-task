@@ -94,6 +94,10 @@
         icon: mdi-cog-box
         href: http://100.68.205.95:7425/
         description: farm-pc Web 管理 · 首访需 ?k= 参数
+    - 本机端口服务:
+        icon: mdi-lan
+        href: /host-ports/index.html
+        description: free-arm 本机监听端口与服务快照（每分钟更新）
 
 - Farm PC 算力:
     - 算力服务总览:

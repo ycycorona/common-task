@@ -14,7 +14,7 @@
 **本目录是配置的唯一来源**，`~/portal` 只是运行副本。改完在这里提交，再同步过去：
 
 ```sh
-rsync -a --delete --exclude=config/logs ~/orca_pro/common-task/portal/ ~/portal/
+rsync -a --delete --exclude=config/logs --exclude=public/host-ports/data.json ~/orca_pro/common-task/portal/ ~/portal/
 cd ~/portal && docker compose up -d          # 首次；之后 yaml 会自动热重载
 ```
 
@@ -46,6 +46,8 @@ curl -sI http://127.0.0.1:8790/ | head -1               # 期望 200
 | `config/bookmarks.yaml` | 底部常用链接 |
 | `config/custom.js` | 按 UA 改写 Orca 卡片的跳转（见下） |
 | `public/farm-compute.html` | Farm PC 算力服务汇总：在线三服务、orc-1 接入、启动限制及未启动安装；只读挂载到 Homepage public |
+| `public/host-ports/index.html` | free-arm 本机监听端口与服务快照页，读取同目录 `data.json`；目录只读挂载到 Homepage public |
+| `scripts/collect_host_ports.py` | 采集本机 `ss -H -tlnp` 监听端口并原子写入 `data.json`（不入 Git，由主机定时任务每分钟刷新） |
 
 容器首次启动会在 `config/` 里生成 `custom.css`、`custom.js`、`docker.yaml`、`kubernetes.yaml`、`proxmox.yaml`、`logs/`；除 `custom.js` 外都没用，不入 Git。
 

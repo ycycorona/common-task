@@ -32,3 +32,4 @@ venv/
 folders/
 .dsh-im/
 dist/
+portal/public/host-ports/data.json

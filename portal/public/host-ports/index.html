@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>本机端口服务总览 · 开发 Portal</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; }
+    body { max-width: 1120px; margin: auto; padding: 32px 20px 60px; line-height: 1.65; }
+    a { color: #7dd3fc; text-underline-offset: 3px; }
+    h1 { margin: 20px 0 8px; font-size: clamp(1.8rem, 4vw, 2.4rem); line-height: 1.3; }
+    h2 { margin: 0 0 12px; font-size: 1.25rem; }
+    .muted { color: #a7b6ca; }
+    .panel { margin-top: 24px; padding: 24px; border: 1px solid #334155; border-radius: 12px; background: #172236; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 11px 12px; border-bottom: 1px solid #334155; vertical-align: top; }
+    th { color: #cbd5e1; font-size: .9rem; white-space: nowrap; }
+    code { font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+    .badge { display: inline-block; padding: 2px 10px; margin: 4px 8px 4px 0; border-radius: 20px; background: #164e43; color: #b6f4d6; font-size: .88rem; }
+    .badge.secondary { background: #394354; color: #e2e8f0; }
+    .scope-pill { display: inline-block; padding: 1px 8px; border-radius: 6px; font-size: .82rem; white-space: nowrap; }
+    .scope-tailnet { background: #164e43; color: #b6f4d6; }
+    .scope-all { background: #1e3a5f; color: #bae6fd; }
+    .scope-loopback { background: #334155; color: #cbd5e1; }
+    .scope-other { background: #4c1d95; color: #ddd6fe; }
+    button {
+      padding: 6px 14px; border-radius: 8px; border: 1px solid #475569;
+      background: #1e293b; color: #e2e8f0; cursor: pointer; font-size: .9rem;
+    }
+    button:hover { background: #334155; }
+    .error-box { padding: 14px 16px; border-radius: 8px; background: #450a0a; border: 1px solid #991b1b; color: #fecaca; }
+  </style>
+</head>
+<body>
+  <nav aria-label="导航"><a href="/">← 开发 Portal</a> · <a href="/farm-compute.html">Farm PC 算力</a></nav>
+  <header>
+    <h1>本机端口服务总览</h1>
+    <p id="host-meta" class="muted">正在加载本机监听快照…</p>
+    <p id="summary-badges"></p>
+  </header>
+
+  <div id="error-container"></div>
+
+  <section class="panel" aria-labelledby="exposed-title">
+    <div class="toolbar">
+      <h2 id="exposed-title">对外 / Tailnet 监听服务</h2>
+      <button id="refresh-btn" type="button">刷新快照</button>
+    </div>
+    <p class="muted">包含绑定到 Tailscale（<code>100.x</code> / <code>fd7a:</code>）及全网通配地址（<code>0.0.0.0</code> / <code>::</code> / <code>*</code>）的 TCP 服务；公网侧仍受本机 iptables（仅放行 22 / 28010）约束。</p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">端口</th>
+            <th scope="col">范围</th>
+            <th scope="col">服务与说明</th>
+            <th scope="col">绑定地址</th>
+            <th scope="col">进程 / PID</th>
+            <th scope="col">入口</th>
+          </tr>
+        </thead>
+        <tbody id="exposed-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="loopback-title">
+    <div class="toolbar">
+      <h2 id="loopback-title">本机回环监听（127.0.0.1 / ::1）</h2>
+      <button id="toggle-ephemeral-btn" type="button">显示临时 IDE 端口</button>
+    </div>
+    <p class="muted">仅本机回环可见，通常作为反代后端（如 Caddy :8787 → :8788）或 IDE/Agent 内部通信端口。</p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">端口</th>
+            <th scope="col">服务与说明</th>
+            <th scope="col">绑定地址</th>
+            <th scope="col">进程 / PID</th>
+          </tr>
+        </thead>
+        <tbody id="loopback-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <script>
+    const SCOPE_LABELS = {
+      tailnet: { text: "Tailnet", cls: "scope-tailnet" },
+      all: { text: "全网卡 (*)", cls: "scope-all" },
+      loopback: { text: "本机回环", cls: "scope-loopback" },
+      other: { text: "其他网卡", cls: "scope-other" },
+    };
+
+    let showEphemeral = false;
+    let latestData = null;
+
+    function createCell(text, isCode = false) {
+      const td = document.createElement("td");
+      if (isCode) {
+        const code = document.createElement("code");
+        code.textContent = text;
+        td.appendChild(code);
+      } else {
+        td.textContent = text;
+      }
+      return td;
+    }
+
+    function createScopeCell(scope) {
+      const td = document.createElement("td");
+      const span = document.createElement("span");
+      const info = SCOPE_LABELS[scope] || { text: scope, cls: "scope-other" };
+      span.className = "scope-pill " + info.cls;
+      span.textContent = info.text;
+      td.appendChild(span);
+      return td;
+    }
+
+    function createServiceCell(item) {
+      const td = document.createElement("td");
+      const strong = document.createElement("strong");
+      strong.textContent = item.name;
+      td.appendChild(strong);
+      if (item.description) {
+        td.appendChild(document.createElement("br"));
+        const desc = document.createElement("span");
+        desc.className = "muted";
+        desc.textContent = item.description;
+        td.appendChild(desc);
+      }
+      return td;
+    }
+
+    function createProcessCell(item) {
+      if (!item.process) {
+        return createCell("受限/系统进程", false);
+      }
+      const label = item.pid ? `${item.process} (PID ${item.pid})` : item.process;
+      return createCell(label, true);
+    }
+
+    function createLinkCell(item) {
+      const td = document.createElement("td");
+      if (item.href) {
+        const a = document.createElement("a");
+        a.href = item.href;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = item.href;
+        td.appendChild(a);
+      } else {
+        td.className = "muted";
+        td.textContent = "-";
+      }
+      return td;
+    }
+
+    function renderSnapshot(data) {
+      latestData = data;
+      const hostMeta = document.getElementById("host-meta");
+      hostMeta.textContent = `主机 ${data.hostname} · Tailscale ${data.tailscale_ip} · 采集时间 ${data.generated_at}`;
+
+      const badges = document.getElementById("summary-badges");
+      badges.replaceChildren();
+      const s = data.summary || {};
+      const items = [
+        { text: `${s.exposed_count ?? 0} 个对外 / Tailnet 端口`, cls: "badge" },
+        { text: `${s.loopback_count ?? 0} 个本机回环端口（含 ${s.ephemeral_count ?? 0} 个临时 IDE 端口）`, cls: "badge secondary" },
+      ];
+      for (const b of items) {
+        const span = document.createElement("span");
+        span.className = b.cls;
+        span.textContent = b.text;
+        badges.appendChild(span);
+      }
+
+      const exposedTbody = document.getElementById("exposed-tbody");
+      exposedTbody.replaceChildren();
+      const exposedRows = (data.services || []).filter((item) => item.scope !== "loopback");
+      if (exposedRows.length === 0) {
+        const tr = document.createElement("tr");
+        const td = createCell("暂无对外监听端口");
+        td.colSpan = 6;
+        tr.appendChild(td);
+        exposedTbody.appendChild(tr);
+      } else {
+        for (const item of exposedRows) {
+          const tr = document.createElement("tr");
+          tr.appendChild(createCell(String(item.port), true));
+          tr.appendChild(createScopeCell(item.scope));
+          tr.appendChild(createServiceCell(item));
+          tr.appendChild(createCell((item.addresses || []).join(", "), true));
+          tr.appendChild(createProcessCell(item));
+          tr.appendChild(createLinkCell(item));
+          exposedTbody.appendChild(tr);
+        }
+      }
+
+      const loopbackTbody = document.getElementById("loopback-tbody");
+      loopbackTbody.replaceChildren();
+      const loopbackRows = (data.services || []).filter(
+        (item) => item.scope === "loopback" && (showEphemeral || !item.ephemeral)
+      );
+      if (loopbackRows.length === 0) {
+        const tr = document.createElement("tr");
+        const td = createCell("暂无非临时本机回环端口");
+        td.colSpan = 4;
+        tr.appendChild(td);
+        loopbackTbody.appendChild(tr);
+      } else {
+        for (const item of loopbackRows) {
+          const tr = document.createElement("tr");
+          tr.appendChild(createCell(String(item.port), true));
+          tr.appendChild(createServiceCell(item));
+          tr.appendChild(createCell((item.addresses || []).join(", "), true));
+          tr.appendChild(createProcessCell(item));
+          loopbackTbody.appendChild(tr);
+        }
+      }
+
+      const toggleBtn = document.getElementById("toggle-ephemeral-btn");
+      toggleBtn.textContent = showEphemeral
+        ? `隐藏临时 IDE 端口 (${s.ephemeral_count ?? 0})`
+        : `显示临时 IDE 端口 (${s.ephemeral_count ?? 0})`;
+    }
+
+    async function loadData() {
+      const errorBox = document.getElementById("error-container");
+      errorBox.replaceChildren();
+      try {
+        const resp = await fetch("/host-ports/data.json?t=" + Date.now(), { cache: "no-store" });
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status}`);
+        }
+        const data = await resp.json();
+        renderSnapshot(data);
+      } catch (err) {
+        const div = document.createElement("div");
+        div.className = "error-box";
+        div.textContent = `无法读取端口快照 (/host-ports/data.json)：${err.message}。请确认主机定时采集脚本已运行。`;
+        errorBox.appendChild(div);
+      }
+    }
+
+    document.getElementById("refresh-btn").addEventListener("click", loadData);
+    document.getElementById("toggle-ephemeral-btn").addEventListener("click", () => {
+      showEphemeral = !showEphemeral;
+      if (latestData) {
+        renderSnapshot(latestData);
+      }
+    });
+
+    loadData();
+  </script>
+</body>
+</html>
