@@ -69,6 +69,7 @@ Last Validated: 2026-11-12 (INV-15 only)
 
 ## Open items
 
+- 全量同步待办（业主 2026-11-14 chat 授权立项，「1 授权」）：基线 `2026.11.06-1` → 目标 `2026.11.14-1`（toolkit master `f1a07c8`，已推送）。需补 `2026.11.08-1`、`2026.11.11-1`、`-2`、`-3`、`2026.11.12-1`…`-6`、`2026.11.13-1`、`2026.11.14-1`。本仓无编排副本、无 issue tracker（脚本集合），`2026.11.13-1`/`2026.11.14-1` 编排改动 N/A，重点补其余修订。按 USAGE「Sync a repository」六步本地同步，冲突须业主逐项裁定；实施需另行授权。
 - INV-15 is verified on this work branch against the locally merged source; local landing is authorized; remote publication remains pending authorization.
   Older baseline gaps are retained; the full Playbook revision is intentionally unchanged.
 - Run Tracker 同步无未决项；未重写历史或引入项目注册。
