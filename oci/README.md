@@ -4,7 +4,7 @@
 块存储与备份、Object Storage 桶、limits 与费用。**账户现状的单一事实源不在本仓库**，在
 `../../tech_note_ai/30-Knowledge/Infra/oci-free-vcn-实例与SSH访问.md`；这里只放操作脚本与凭据约定。
 
-Last Validated: 2026-11-15（session 授权跑通：`oci iam region list`、`oci os ns get`、实例与桶清单）
+Last Validated: 2026-11-16（PAYG 生效、当月花费与 A1 免费额度的观测结论见下）
 
 ## 凭据：浏览器 session token（2026-11-15 定）
 
@@ -65,6 +65,41 @@ oci compute instance list -c <tenancy-ocid> --all --output table \
   --query "data[].{name:\"display-name\",state:\"lifecycle-state\",shape:shape}"
 oci os bucket list -ns axh5gtcz4wbl -c <tenancy-ocid> --output table
 ```
+
+## 账户状态（2026-11-16 实测）
+
+| 项 | 值 |
+| :--- | :--- |
+| payment-model | `PAYG`（`FREE_TRIAL` → 升级生效于 `time-updated: 2026-11-15T22:12:59Z`） |
+| 计费起点 | `end-date: 2026-11-20T23:59:59Z` —— credit 到这天为止，之后按卡扣 |
+| 花费 | 10 月 €19.70 + 11 月至今 €34.30 ≈ €54（占 $300 credit 的 ~21%，其余 11-20 作废） |
+| 日耗稳定值 | €2.18094 = `orc-1`（E5.Flex）€2.05344 + `mem-e5` 100 GB 引导卷 €0.1275 |
+| 全免项 | `free-arm`（A1 4 OCPU/24 GB）及其 200 GB 卷、VCN、Object Storage、Telemetry |
+
+### A1 免费额度：观测值指向 4 OCPU/24 GB
+
+官方文档口径是「所有 tenancy 每月 1,500 OCPU-h + 9,000 GB-h，Always Free tenancy 等价 2 OCPU/12 GB」；
+社区口径说 PAYG 是 3,000 OCPU-h + 18,000 GB-h（≈4/24）。用成本数据可以分辨：
+
+- `free-arm` 4 OCPU/24 GB 自 2026-10-22 起跑，按资源查 `usage-api` 的 COST，**每天都是 0.000000**
+  （同期 `orc-1` 每天 2.053440，对照组有效）。
+- 若额度是 1,500 OCPU-h（4 OCPU 每天 96 OCPU-h）：按自然月算第 15.6 天、即 **11-16 前后**该开始计费；
+  按滚动 30 天算更早（**11-06 前后**）。两个口径都过了，11-16 仍是 0。
+- 3,000 OCPU-h 口径下 4 OCPU 跑满 30 天 = 2,920 OCPU-h、24 GB × 730 h = 17,520 GB-h，都刚好在额度内 —— 与观测一致。
+
+结论（未定稿）：**升级 PAYG 后是 4 OCPU/24 GB 全免**。留两个观察点收口：11-17/11-18 的日成本仍为 0，
+以及 11-21 起真实计费窗口里 `free-arm` 仍为 0。
+
+### Budget 告警现状（注意 11-22 到期）
+
+| 项 | 值 |
+| :--- | :--- |
+| budget | 名 `1`，`amount: 1.0`，`processing-period-type: SINGLE_USE`，2026-10-22 → **2026-11-22** |
+| 告警 | ACTUAL €25 / €100 / €200 / €240，FORECAST €250，收件人 `ycy421@gmail.com`，全部 ACTIVE |
+
+`amount: 1.0` 与阈值（€25…€250）对不上，实际起作用的只有绝对金额阈值；且 `SINGLE_USE` 让整组告警
+在 **2026-11-22** 失效 —— PAYG 之后没有回收兜底，届时要重建一个长期的（命令见
+`oci budgets budget budget list` / `oci budgets budget alert-rule list`）。
 
 ## 被推翻的方案（2026-11-15）
 
