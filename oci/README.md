@@ -220,7 +220,8 @@ oci ons subscription list --compartment-id $T --topic-id <topic-ocid> --all     
    `oci monitoring alarm-status list-alarms-status` 报 `status: FIRING`；
 3. 立刻改回 `> 8000000000` 与 `PT30M`（`alarm get` 复核 query/pending/severity/enabled 均已恢复）。
 
-结论：告警→ONS→邮件这条链路在 OCI 侧是通的（FIRING 已确认）；**邮箱端是否真收到由收件人确认**。
+结论：**整条链路已闭环** —— OCI 侧 `FIRING`，收件人 2026-11-16 确认收到 TEST 邮件。
+注意改配置后状态不会立刻从 FIRING 转 OK，要等下一个数据点。
 注意改配置后状态不会立刻从 FIRING 转 OK，要等下一个数据点。
 
 ## 备份与恢复（2026-11-16）
