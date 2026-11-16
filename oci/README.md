@@ -95,7 +95,8 @@ oci os bucket list -ns axh5gtcz4wbl -c <tenancy-ocid> --output table
 | 项 | 值 |
 | :--- | :--- |
 | budget | `payg-monthly-150`，`amount: 150`，`processing-period-type: MONTH`，`reset-period: MONTHLY`，**无到期日** |
-| 告警 | `actual-70`、`actual-150`，均为 `ABSOLUTE` + `ACTUAL`，收件人 `ycy421@gmail.com` |
+| 告警 | `actual-1`、`actual-70`、`actual-150`，均为 `ABSOLUTE` + `ACTUAL`，收件人 `ycy421@gmail.com` |
+| 语义 | 月度预算 + 绝对阈值 → **每月**累计花费跨过阈值时发**一封**，不是每笔都发；评估按天，不是实时 |
 
 ```sh
 T=<tenancy ocid>
