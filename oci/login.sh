@@ -36,6 +36,13 @@ deliver() {
     printf '登录成功，%s\n' "$(oci session validate --local)"
 }
 
+if [[ ${1:-} == "-" ]]; then
+    # 从标准输入读一条，避免 token 进 shell history 或 ps
+    IFS= read -r raw || die "标准输入里没读到内容"
+    deliver "$raw"
+    exit $?
+fi
+
 if [[ $# -gt 0 ]]; then
     deliver "$1"
     exit $?
@@ -67,7 +74,25 @@ for _ in $(seq 1 20); do
 done
 [[ -n $url ]] || { cat "$LOG" >&2; die "20 秒内没拿到登录链接"; }
 
+tailscale_ip=$(tailscale ip -4 2>/dev/null | head -1)
 cat <<EOF
+在浏览器打开这条链接登录（每次链接都不同，别用旧标签页里那条）：
+$url
+
+登录完成后浏览器会跳到 http://localhost:$PORT/ 并显示打不开 —— 这时**不要复制地址栏**，改为：
+  把地址栏里的 localhost 换成 ${tailscale_ip:-<free-arm 的 Tailscale IP>}  再回车
+例如 http://${tailscale_ip:-100.x.y.z}:$PORT/#security_token=...
+页面会显示 "Authorization completed!"，token 直接落到本机，不经过终端、不进 history、不进对话。
+
+或者（等价，适合 localhost 不能改地址栏的情况）：先在 Mac 上开隧道
+  ssh -L $PORT:127.0.0.1:$PORT free-arm
+再重新登录一次，就会自动完成。
+
+最后手段：从标准输入喂回调（不进 history / ps，但 token 会出现在屏幕上）
+  oci/login.sh -   # 回车后粘贴那条 http://localhost:$PORT/#security_token=...
+
+授权进程 pid=$bgpid，日志 $LOG。它不会自己超时；放弃时 pkill -f 'oci session authenticate'。
+EOF
 在浏览器打开这条链接登录（每次链接都不同，别用旧标签页里那条）：
 $url
 
