@@ -4,7 +4,7 @@
 块存储与备份、Object Storage 桶、limits 与费用。**账户现状的单一事实源不在本仓库**，在
 `../../tech_note_ai/30-Knowledge/Infra/oci-free-vcn-实例与SSH访问.md`；这里只放操作脚本与凭据约定。
 
-Last Validated: 2026-11-16（PAYG 生效、当月花费与 A1 免费额度的观测结论见下）
+Last Validated: 2026-11-16（PAYG 生效、当月花费、A1 额度两处官方口径与自证用量、存储类额度与首份卷备份）
 
 ## 凭据：浏览器 session token（2026-11-15 定）
 
@@ -83,7 +83,48 @@ Oracle 官方数字（`Always Free Resources` 页，2026-11-16 抓取）：
 | 资源 | Always Free 额度 | 现状 | 判定 |
 | :--- | :--- | :--- | :--- |
 | 块存储（boot + block **合计**） | 200 GB | 300 GB：`free-arm` 200 + `mem-e5` 100 | 超 100 GB = €0.1275/天；删掉 `mem-e5` 后正好 200 |
-| 卷备份（boot + block 合计，限 home region） | **5 个** | 0 个 | 5 个空位，第 6 个会被 API 拒绝 |
+| 卷备份（boot + block 合计，限 home region） | **5 个**（`oci limits value list --service-name block-storage` → `free-backup-count = 5`，与 `total-free-storage-gb = 200` 是**两个独立字段**） | 1 个：`free-arm-baseline-20261116`（200 GB，FULL，AVAILABLE） | 用 1/5。备份按**个数**计，不按 GB；200 GB 全量备份不占那 200 GB 卷额度 |
+| 对象存储（PAYG / 有 credit 的账户） | Standard 10 GB + Infrequent 10 GB + Archive 10 GB，50,000 请求/月 | 桶 `yorches-spec006-t7` 内 14 个对象 / **13.97 MB**（Standard） | 用了 0.14% |
+| MySQL HeatWave（Always Free DB system） | 50 GB 数据 + 50 GB 备份 | 无 DBaaS 实例 | 无关 |
+
+两点容易混淆：
+
+- 应用自己传到桶里的数据库 dump（`yorches-spec006-t7/daily/*.dump`）**不占**「5 个卷备份」名额 ——
+  那 5 个只数 `oci bv backup` / `boot-volume-backup`。应用级备份只吃对象存储的 10/10/10 GB。
+- 试用期账户可以无限量存对象、只免费前 20 GB；试用结束后若对象超过 20 GB，**全部对象被删**。
+  这里只有 14 MB，不构成风险。
+
+### A1 免费额度：PAYG 是 3,000 OCPU-h / 18,000 GB-h（=4 OCPU/24 GB）
+
+**两处官方口径，按账户类型分工，不矛盾**（2026-11-16 抓取）：
+
+| 来源 | 原文 | 适用 |
+| :--- | :--- | :--- |
+| `docs.oracle.com/…/Always_Free_Resources.htm` | `All tenancies get the first 1,500 OCPU hours and 9,000 GB hours per month` + `For Always Free tenancies, this is equivalent to 2 OCPUs and 12 GB of memory.` | Always Free-only tenancy（未升级） |
+| `oracle.com/cloud/price-list/` | `Each paid tenancy gets the first 3,000 OCPU hours and 18,000 GB hours per month for free to create Ampere A1 Compute instances.` | 已升级的付费 tenancy（PAYG） |
+
+**自证用量**（`usage-api --query-type USAGE --group-by '["skuName"]'`，2026-11-01 → 11-16）：
+
+| SKU | 用量 | 对照 |
+| :--- | :--- | :--- |
+| `Standard - A1` | **1,510 OCPU Per Hour** | 4 OCPU × 15.7 天 = 1,509，吻合 |
+| `Standard - A1 - Memory` | **9,060 Gigabyte Per Hour** | 24 GB × 15.7 天 = 9,063，吻合 |
+
+1,510 / 3,000 ≈ 50.3%、9,060 / 18,000 ≈ 50.3% —— 半个月刚好用掉付费额度的一半，且按资源查 COST 每天仍是 `0.000000`。
+若额度是 1,500/9,000，此刻已越线（10 OCPU-h、60 GB-h），成本数据滞后的话最近一两天才会反映出来。
+
+**因此**：4 OCPU/24 GB 在一个自然月内（2,920 OCPU-h / 17,520 GB-h）仍在付费 tenancy 的免费额度内；
+但**跑满整月只剩 80 OCPU-h / 480 GB-h 余量**，不能再加 A1 实例，也不要在月内停机重开折腾。
+定性收口靠 2026-11-18 之后 `free-arm` 的日成本是否出现非 0：出现即说明按 1,500 口径算，需要降到 2 OCPU/12 GB。
+
+### 存储类免费额度与现状（2026-11-16）
+
+Oracle 官方数字（`Always Free Resources` 页，2026-11-16 抓取）：
+
+| 资源 | Always Free 额度 | 现状 | 判定 |
+| :--- | :--- | :--- | :--- |
+| 块存储（boot + block **合计**） | 200 GB | 300 GB：`free-arm` 200 + `mem-e5` 100 | 超 100 GB = €0.1275/天；删掉 `mem-e5` 后正好 200 |
+| 卷备份（boot + block 合计，限 home region） | **5 个**（`oci limits value list --service-name block-storage` → `free-backup-count = 5`，与 `total-free-storage-gb = 200` 是**两个独立字段**） | 1 个：`free-arm-baseline-20261116`（200 GB，FULL，AVAILABLE） | 用 1/5。备份按**个数**计，不按 GB；200 GB 全量备份不占那 200 GB 卷额度 |
 | 对象存储（PAYG / 有 credit 的账户） | Standard 10 GB + Infrequent 10 GB + Archive 10 GB，50,000 请求/月 | 桶 `yorches-spec006-t7` 内 14 个对象 / **13.97 MB**（Standard） | 用了 0.14% |
 | MySQL HeatWave（Always Free DB system） | 50 GB 数据 + 50 GB 备份 | 无 DBaaS 实例 | 无关 |
 
