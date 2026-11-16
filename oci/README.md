@@ -94,8 +94,8 @@ oci os bucket list -ns axh5gtcz4wbl -c <tenancy-ocid> --output table
 
 | 项 | 值 |
 | :--- | :--- |
-| budget | `payg-monthly-150`，`amount: 150`，`processing-period-type: MONTH`，`reset-period: MONTHLY`，**无到期日** |
-| 告警 | `actual-1`、`actual-70`、`actual-150`，均为 `ABSOLUTE` + `ACTUAL`，收件人 `ycy421@gmail.com` |
+| budget | `payg-monthly-150`，`amount: 150`（仅作参考，阈值是绝对金额），`processing-period-type: MONTH`，`reset-period: MONTHLY`，**无到期日** |
+| 告警 | `actual-1`、`actual-5`、`actual-25`，均为 `ABSOLUTE` + `ACTUAL`，收件人 `ycy421@gmail.com` |
 | 语义 | 月度预算 + 绝对阈值 → **每月**累计花费跨过阈值时发**一封**，不是每笔都发；评估按天，不是实时 |
 
 **未确认**：budgets 是否把「被 credit 覆盖的用量」算进 actual-spend。Oracle 的 Budgets 文档里 `credit` 出现 0 次；旧的 `name=1` 预算存在 25 天、同期 usage-api 记了 €54，但 `actual-spend` 一直是 `null` —— 与「按 usage 计」矛盾，也支持「只算真扣费」。
