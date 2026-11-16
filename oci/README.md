@@ -76,6 +76,24 @@ oci os bucket list -ns axh5gtcz4wbl -c <tenancy-ocid> --output table
 | 日耗稳定值 | €2.18094 = `orc-1`（E5.Flex）€2.05344 + `mem-e5` 100 GB 引导卷 €0.1275 |
 | 全免项 | `free-arm`（A1 4 OCPU/24 GB）及其 200 GB 卷、VCN、Object Storage、Telemetry |
 
+### 存储类免费额度与现状（2026-11-16）
+
+Oracle 官方数字（`Always Free Resources` 页，2026-11-16 抓取）：
+
+| 资源 | Always Free 额度 | 现状 | 判定 |
+| :--- | :--- | :--- | :--- |
+| 块存储（boot + block **合计**） | 200 GB | 300 GB：`free-arm` 200 + `mem-e5` 100 | 超 100 GB = €0.1275/天；删掉 `mem-e5` 后正好 200 |
+| 卷备份（boot + block 合计，限 home region） | **5 个** | 0 个 | 5 个空位，第 6 个会被 API 拒绝 |
+| 对象存储（PAYG / 有 credit 的账户） | Standard 10 GB + Infrequent 10 GB + Archive 10 GB，50,000 请求/月 | 桶 `yorches-spec006-t7` 内 14 个对象 / **13.97 MB**（Standard） | 用了 0.14% |
+| MySQL HeatWave（Always Free DB system） | 50 GB 数据 + 50 GB 备份 | 无 DBaaS 实例 | 无关 |
+
+两点容易混淆：
+
+- 应用自己传到桶里的数据库 dump（`yorches-spec006-t7/daily/*.dump`）**不占**「5 个卷备份」名额 ——
+  那 5 个只数 `oci bv backup` / `boot-volume-backup`。应用级备份只吃对象存储的 10/10/10 GB。
+- 试用期账户可以无限量存对象、只免费前 20 GB；试用结束后若对象超过 20 GB，**全部对象被删**。
+  这里只有 14 MB，不构成风险。
+
 ### A1 免费额度：观测值指向 4 OCPU/24 GB
 
 官方文档口径是「所有 tenancy 每月 1,500 OCPU-h + 9,000 GB-h，Always Free tenancy 等价 2 OCPU/12 GB」；
