@@ -176,6 +176,68 @@ oci budgets budget alert-rule list --budget-id <budget-id> --output table
   正确形状：`--targetType COMPARTMENT --targets '["<tenancy-ocid>"]'`。
 - 阈值是**绝对金额**（`--threshold-type ABSOLUTE`），要按百分比就换 `PERCENTAGE` + `--threshold 50`。
 
+## 备份与恢复（2026-11-16）
+
+### 现在有什么
+
+| 层 | 产物 | 位置 | 说明 |
+| :--- | :--- | :--- | :--- |
+| L0 | git 仓库 | GitHub | 代码层，唯一能自动异地的一层 |
+| L1 | `free-arm-<UTC>.tar.zst.gpg` | `~/backups/`（**仅本机**） | 由 `./backup.sh` 生成；实测 252 MB / 解压 4.1 GB |
+| L1' | `t7-backup.timer` 每周日 01:30 | 对象存储 `yorches-spec006-t7/daily/` | 仅一个库的 pg_dump + 校验 + 恢复演练 |
+| L3 | `free-arm-baseline-20261116` | OCI 卷备份 | 200 GB FULL，占 1/5 免费名额 |
+
+L1 内容：`orca/`（`~/.config/orca`，**排除** `agent-runtimes`、`orcad-artifacts`、`plugins-data`、`logs`）、
+`.ssh`、`.oci`、`.gnupg`、`.config/{magpie,115-util,gh}`、`system/`（fstab、hosts、sshd_config、
+unit 清单、timers、crontab、自定义 unit 文件）、`portal/config`、`db/*.dump`（各 postgres 容器）。
+
+为什么排除那四类：`~/.config/orca` 实测 **5.3 GB**，其中 `agent-session-journal.db` 就 3.5 GB、
+`agent-runtimes` 1.0 GB、`orcad-artifacts` 320 MB、`plugins-data` 160 MB —— 后者全可重装，
+只留状态后才压到 252 MB。
+
+口令：`~/.config/free-arm-backup/passphrase`（600，随机生成）。**必须另存一份到密码管理器** ——
+机器没了就等于备份打不开。加解密：`gpg --batch --symmetric --cipher-algo AES256 --compress-algo none`。
+
+### 文件级恢复（迁到新机或救单个文件）
+
+```sh
+# 1. 解密 + 解包（口令文件从密码管理器取回，不要放进仓库）
+gpg --batch --decrypt --passphrase-file <passphrase> -o /tmp/fa.tar.zst ~/backups/free-arm-<ts>.tar.zst.gpg
+mkdir -p /tmp/fa && tar -C /tmp/fa -xf /tmp/fa.tar.zst
+
+# 2. 按目录对位还原（先备份现场的旧文件）
+rsync -a /tmp/fa/free-arm-<ts>/orca/        ~/.config/orca/
+rsync -a /tmp/fa/free-arm-<ts>/.ssh/        ~/.ssh/
+rsync -a /tmp/fa/free-arm-<ts>/.oci/        ~/.oci/
+rsync -a /tmp/fa/free-arm-<ts>/.config/     ~/.config/
+cp -a  /tmp/fa/free-arm-<ts>/system/*       /etc/          # 逐个看，别整目录覆盖
+cp -a  /tmp/fa/free-arm-<ts>/portal/config/ ~/portal/config/
+
+# 3. 数据库（容器起来之后）
+docker exec -i -u postgres <容器> pg_restore -U postgres -d "$POSTGRES_DB" --clean --if-exists < db/<容器>.dump
+```
+
+单个文件的场景（比如只丢了 `~/.config/orca/profiles/local-default/`）不要重启 Orca，先 `tar -x` 取那一个路径比较安全。
+
+### 卷级恢复（整机重来）
+
+1. `oci bv boot-volume create --source-boot-volume-backup-id <backup-ocid> --size-in-gbs 200 --availability-domain <AD>`
+   —— 注意 `oci bv boot-volume list` 里备份与卷都要在 **home region**。
+2. `oci compute instance launch --shape VM.Standard.A1.Flex --shape-config '{"ocpus":4,"memoryInGBs":24}'`
+   挂这块新卷当引导卷，subnet 与安全列表用原来的（`Default Security List for free-vcn`）。
+3. **A1 可能抢不到容量**：`out of host capacity` 时只能换 AD 重试或等；这正是需要 L4 异地副本的原因。
+4. 起来之后：`tailscale up`（重新登录）、`docker compose up -d`（`~/portal`）、
+   `systemctl start agentsview caddy dashboard-serve komari-agent`、`systemctl list-timers` 核对 `t7-backup`。
+5. 核对：`hostname`、`df -h /`（应 193 G）、`ssh -T git@github.com`、`oci session authenticate`（重登）。
+
+### 已知缺口
+
+- L1 只在**本机** `~/backups/`：防误删与配置写坏，不防磁盘/实例丢失。上传需要 OCI 会话（每小时过期）——
+  长期方案是 Instance Principal + 专用桶，见 `<tech_note_ai>/AI-Output/2026-11-16-OCI-free-arm-备份策略调研.md`。
+- 容器 `yorches-tests` 里的 **postgres 没在跑**（`pg_isready` 无 socket、日志停在 2026-11-14T21:48），
+  所以它的 `pg_dump` 一直失败；要么修，要么确认无用后删掉该容器。
+- 没做过恢复演练：唯一证明是"解一个包、取一个文件、比一次 hash"。
+
 ## 被推翻的方案（2026-11-15）## 被推翻的方案（2026-11-15）
 
 - **A. 复制 `box` 上那把 key**：`box` 是 grok bot 的机器、已停用，`ssh box` 在 free-arm 上直接解析失败。
@@ -190,5 +252,6 @@ oci budgets budget alert-rule list --budget-id <budget-id> --output table
 | `README.md` | 本节 + 凭据约定 |
 | `.gitignore` | 只对本目录忽略 `*.pem` |
 | `login.sh` | 会话登录：起授权打印链接 / 粘回调地址 / 打印到期时间 |
+| `backup.sh` | 状态备份：Orca 状态 + 密钥 + 系统配置 + 各 pg 库，zstd 打包、可选 gpg 加密 |
 
 脚本按需新增（如清单、桶巡检），单文件用法写脚本头部注释，不预先建空目录。
