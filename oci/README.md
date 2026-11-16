@@ -234,8 +234,16 @@ docker exec -i -u postgres <容器> pg_restore -U postgres -d "$POSTGRES_DB" --c
 
 - L1 只在**本机** `~/backups/`：防误删与配置写坏，不防磁盘/实例丢失。上传需要 OCI 会话（每小时过期）——
   长期方案是 Instance Principal + 专用桶，见 `<tech_note_ai>/AI-Output/2026-11-16-OCI-free-arm-备份策略调研.md`。
-- 容器 `yorches-tests` 里的 **postgres 没在跑**（`pg_isready` 无 socket、日志停在 2026-11-14T21:48），
-  所以它的 `pg_dump` 一直失败；要么修，要么确认无用后删掉该容器。
+- 三个 postgres 容器的监听是**非默认**的，`backup.sh` 从容器 PID1 的 cmdline 里读端口：
+
+  | 容器 | 监听 | 备注 |
+  | :--- | :--- | :--- |
+  | `yorches-tests` | `127.0.0.1:55452` | trust 认证、**没有挂数据卷**（数据在容器可写层，删容器即丢），2026-11-12 起未重启 |
+  | `yorches-spec006-t8` | `100.126.255.75:55442` | 监听在 Tailscale 地址上；t7 的每周备份就是它 |
+  | `yorches-spec006-test` | 默认 5432 + unix socket | |
+
+  `pg_isready` / `pg_dump` 不带端口时会连默认 5432，于是看起来"服务没在跑" —— 这是 2026-11-16 我误判过的坑。
+  取端口：`docker exec <容器> sh -c "tr '\0' ' ' </proc/1/cmdline"` → 解析 `-c port=NNNN`。
 - 没做过恢复演练：唯一证明是"解一个包、取一个文件、比一次 hash"。
 
 ## 被推翻的方案（2026-11-15）## 被推翻的方案（2026-11-15）

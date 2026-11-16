@@ -50,8 +50,10 @@ done
 mkdir -p "$STAGE/db"
 for c in $(docker ps --format '{{.Names}}\t{{.Image}}' 2>/dev/null | awk -F'\t' '$2 ~ /postgres/ {print $1}'); do
     [[ $c == yorches-spec006-t7* ]] && continue
-    # 容器里不一定有 POSTGRES_USER（yorches-tests 就只有 POSTGRES_DB），所以兜底 postgres
-    if docker exec -u postgres "$c" sh -c 'pg_dump -Fc -d "$POSTGRES_DB" -U "${POSTGRES_USER:-postgres}"' > "$STAGE/db/$c.dump" 2>"$WORK/$c.err"; then
+    # 容器的端口/监听地址是自定义的（yorches-tests 55452、spec006-t8 55442），从 PID1 的 cmdline 里读，
+    # 有 -p 就带上（unix socket 文件名含端口，不传就会连不上）；POSTGRES_USER 不一定有，兜底 postgres
+    port=$(docker exec "$c" sh -c "tr '\\0' ' ' </proc/1/cmdline" 2>/dev/null | sed -n 's/.*-c port=\([0-9][0-9]*\).*/\1/p' | head -1)
+    if docker exec -u postgres "$c" sh -c "pg_dump -Fc ${port:+-p $port} -d \"\$POSTGRES_DB\" -U \"\${POSTGRES_USER:-postgres}\"" > "$STAGE/db/$c.dump" 2>"$WORK/$c.err"; then
         printf '  db ok: %s %s\n' "$c" "$(du -h "$STAGE/db/$c.dump" | cut -f1)"
     else
         printf '  db FAIL: %s（%s）\n' "$c" "$(tail -1 "$WORK/$c.err")"
