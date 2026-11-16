@@ -90,18 +90,30 @@ oci os bucket list -ns axh5gtcz4wbl -c <tenancy-ocid> --output table
 结论（未定稿）：**升级 PAYG 后是 4 OCPU/24 GB 全免**。留两个观察点收口：11-17/11-18 的日成本仍为 0，
 以及 11-21 起真实计费窗口里 `free-arm` 仍为 0。
 
-### Budget 告警现状（注意 11-22 到期）
+### Budget 告警（2026-11-16 重建）
 
 | 项 | 值 |
 | :--- | :--- |
-| budget | 名 `1`，`amount: 1.0`，`processing-period-type: SINGLE_USE`，2026-10-22 → **2026-11-22** |
-| 告警 | ACTUAL €25 / €100 / €200 / €240，FORECAST €250，收件人 `ycy421@gmail.com`，全部 ACTIVE |
+| budget | `payg-monthly-150`，`amount: 150`，`processing-period-type: MONTH`，`reset-period: MONTHLY`，**无到期日** |
+| 告警 | `actual-70`、`actual-150`，均为 `ABSOLUTE` + `ACTUAL`，收件人 `ycy421@gmail.com` |
 
-`amount: 1.0` 与阈值（€25…€250）对不上，实际起作用的只有绝对金额阈值；且 `SINGLE_USE` 让整组告警
-在 **2026-11-22** 失效 —— PAYG 之后没有回收兜底，届时要重建一个长期的（命令见
-`oci budgets budget budget list` / `oci budgets budget alert-rule list`）。
+```sh
+T=<tenancy ocid>
+oci budgets budget budget list --compartment-id $T --all --output table \
+  --query "data[].{name:\"display-name\",amount:amount,period:\"processing-period-type\",end:end_date}"
+oci budgets budget alert-rule list --budget-id <budget-id> --output table
+```
 
-## 被推翻的方案（2026-11-15）
+- 命令是三层嵌套：`oci budgets budget budget …` / `oci budgets budget alert-rule …`（CLI 3.96.2 如此）。
+- **同一个 target compartment 只允许一个 budget**：直接再建会报
+  `N budgets already exist in target compartment`。旧的那个（名 `1`、`SINGLE_USE`、2026-11-22 到期、
+  阈值 €25/100/200/240 + forecast €250）已删除后才建成新的。
+- `--recipients` 用裸值（`--recipients ycy421@gmail.com`）；写成 `'["…"]'` 会报 `Invalid recipients`。
+- `--targets` 是 `list[str]`，写对象数组会让 CLI 报 `Unable to process JSON input`；
+  正确形状：`--targetType COMPARTMENT --targets '["<tenancy-ocid>"]'`。
+- 阈值是**绝对金额**（`--threshold-type ABSOLUTE`），要按百分比就换 `PERCENTAGE` + `--threshold 50`。
+
+## 被推翻的方案（2026-11-15）## 被推翻的方案（2026-11-15）
 
 - **A. 复制 `box` 上那把 key**：`box` 是 grok bot 的机器、已停用，`ssh box` 在 free-arm 上直接解析失败。
 - **B. 新建专用 IAM 用户 + 长期 key**：可单独吊销、能收窄 policy，但用户选了不留长期密钥。
