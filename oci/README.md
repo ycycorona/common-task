@@ -176,6 +176,41 @@ oci budgets budget alert-rule list --budget-id <budget-id> --output table
   正确形状：`--targetType COMPARTMENT --targets '["<tenancy-ocid>"]'`。
 - 阈值是**绝对金额**（`--threshold-type ABSOLUTE`），要按百分比就换 `PERCENTAGE` + `--threshold 50`。
 
+## 监控与告警（2026-11-16）
+
+分三层，覆盖的额度不同：
+
+| 层 | 监控什么 | 机制 | 状态 |
+| :--- | :--- | :--- | :--- |
+| 容量 | 桶大小 vs 免费额度（Standard/IA/Archive 各 10 GB） | Monitoring 告警，namespace `oci_objectstorage`，指标 `StoredBytes`（bytes） | ✅ 已建 `bucket-size-8g` |
+| 费用 | 任何超量的钱 | Budget `payg-monthly-150` 的 €1 / €5 / €25 三档 | ✅ 已建；`actual-spend` 是否计入 credit 覆盖的用量**未确认** |
+| 请求数 | 50,000 请求/月 | `usage-api` 的 `Object Storage - Requests` SKU（单位 10K） | 只有查询，无告警；本月实测 0.0139 ≈ 139 次 |
+
+### 已建的容量告警
+
+| 项 | 值 |
+| :--- | :--- |
+| 告警 | `bucket-size-8g`，`CRITICAL`，ACTIVE |
+| MQL | `StoredBytes[5m].max() > 8000000000`（阈值 8 GB，十进制；免费 Standard 10 GB） |
+| 分辨率 / 等待 | `--resolution 1m`（该指标**只接受 1m**，写 1h 会被拒）、`--pending-duration PT30M`、重复通知 24h |
+| 通知 | ONS 主题 `objectstorage-alerts` → 邮件 `ycy421@gmail.com` |
+
+```sh
+T=<tenancy-ocid>
+oci monitoring metric-data summarize-metrics-data --compartment-id $T --namespace oci_objectstorage \
+  --query-text 'StoredBytes[6h].max()'            # 看当前值；实测与 oci os object list 求和一致（14,650,054）
+oci monitoring metric list --compartment-id $T --namespace oci_objectstorage --all   # 有哪些指标
+oci monitoring alarm list --compartment-id $T --all                                  # 告警清单
+oci ons subscription list --compartment-id $T --topic-id <topic-ocid> --all         # 订阅状态
+```
+
+已知坑：
+
+- 指标 `StoredBytes` 的 dimension 含 `tier=NORMAL`（Standard），换 tier 要分别看。
+- **桶里没有对象时该桶不发指标**（官方文档），空桶不会有告警。
+- `StoredBytes` 不含未完成的分片上传（残留要 `oci multipart list` 查）。
+- 邮件订阅创建后是 `PENDING`，**必须点邮件里的确认链接**，否则告警触发也不会送达。
+
 ## 备份与恢复（2026-11-16）
 
 ### 现在有什么
