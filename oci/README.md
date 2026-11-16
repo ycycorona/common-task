@@ -20,32 +20,32 @@ Last Validated: 2026-11-15（session 授权跑通：`oci iam region list`、`oci
 私钥与 token 不入 Git（`oci/.gitignore` 忽略 `*.pem`）。tenancy / compartment OCID、region、
 fingerprint、Object Storage namespace **不是机密**，可以写进文档。
 
-### 首次授权 / 续期
+### 首次授权 / 续期（用 `login.sh`）
 
-在 free-arm 上跑，另开一个终端从 Mac 建隧道（浏览器登录完会重定向到 CLI 在 free-arm 上开的
-`127.0.0.1:8181`，不转发这个回调就到不了）：
+CLI 拿 token 的方式是：浏览器登录后重定向到**跑 CLI 那台机器**的 `http://localhost:8181`。
+所以要么先开隧道，要么把回调地址粘回来 —— `login.sh` 两种都支持，端口改不了（CLI 里写死的）。
 
 ```sh
-# Mac
-ssh -L 8181:127.0.0.1:8181 free-arm
-
-# free-arm
-oci session authenticate --region eu-amsterdam-1      # 打开它给的链接登录
-oci session validate                                  # 打印到期时间
+oci/login.sh                     # 会话有效就打印到期时间；否则起授权并打印登录链接
+oci/login.sh 'http://localhost:8181/#security_token=...'   # 没隧道时：把地址栏那条整条粘回来
 ```
 
-`--no-browser` 是备选：不监听端口、不需要隧道，但每次都要显式给 `--region` 和有效分钟数。
-过期前可用 `oci session refresh` 续（**未验证**能续多少次），过期只能重新登录。
+没隧道时浏览器会停在 “This site can't be reached”，这不影响结果：地址栏里就带着
+`#security_token=...`，复制整条交给第二个用法，回调就被送进本机等待中的授权进程。
+有隧道（Mac 上 `ssh -L 8181:127.0.0.1:8181 free-arm`）则自动完成，重跑 `oci/login.sh` 看到期时间。
+
+profile 名固定为 `session`：`~/.bashrc` 里 `OCI_CLI_AUTH=security_token` 与 `OCI_CLI_PROFILE=session`
+都已导出，日常直接 `oci …`。别用 `oci session authenticate` 裸跑 —— `~/.oci/config` 已存在时它会追问
+profile 名，输 `DEFAULT` 会因与旧段冲突而无限重问。
+
+token 默认 60 分钟有效（上限也是 60，`--session-expiration-in-minutes` 范围 5–60）；过期前
+`oci session refresh` 可续（**未验证**能续几次），过期只能重跑 `login.sh`。
 
 ### 调用时必须带 auth 类型
 
-config 里没有 `user` 字段，直接 `oci …` 会报 `The config file at ~/.oci/config is invalid: user missing`。
-两种等价写法：
-
-```sh
-oci iam region list --auth security_token
-export OCI_CLI_AUTH=security_token        # 另存一份；本会话内所有 oci 命令生效
-```
+config 里没有 `user` 字段，不带 auth 类型会报 `The config file at ~/.oci/config is invalid: user missing`。
+`~/.bashrc` 已经导出了 `OCI_CLI_AUTH=security_token` 与 `OCI_CLI_PROFILE=session`，所以登录 shell 里
+`oci …` 直接可用；在脚本或非登录 shell 里要自己带上两者。
 
 ### 已核对的只读事实（2026-11-15）
 
@@ -79,5 +79,6 @@ oci os bucket list -ns axh5gtcz4wbl -c <tenancy-ocid> --output table
 | :--- | :--- |
 | `README.md` | 本节 + 凭据约定 |
 | `.gitignore` | 只对本目录忽略 `*.pem` |
+| `login.sh` | 会话登录：起授权打印链接 / 粘回调地址 / 打印到期时间 |
 
 脚本按需新增（如清单、桶巡检），单文件用法写脚本头部注释，不预先建空目录。
