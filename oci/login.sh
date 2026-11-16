@@ -17,7 +17,8 @@ export OCI_CLI_AUTH=security_token
 export OCI_CLI_PROFILE=$PROFILE
 
 die() { printf '错误：%s\n' "$*" >&2; exit 1; }
-valid() { oci session validate --local >/dev/null 2>&1; }
+# --local 只看到期时间，验不出签名错配；两个都过才算真可用
+valid() { oci session validate --local >/dev/null 2>&1 && oci iam region list >/dev/null 2>&1; }
 
 deliver() {
     local raw=$1 tok
@@ -28,6 +29,10 @@ deliver() {
         || die "投递回调失败：curl 没拿到 200"
     for _ in 1 2 3 4 5 6; do sleep 1; valid && break; done
     valid || die "回调已送达但会话仍无效，看 $LOG"
+    # --local 只看得到到期时间，验不出“token 属于另一对密钥”，所以再打一次真接口
+    if ! oci iam region list >/dev/null 2>&1; then
+        die "token 有到期时间但签名对不上（401）：粘的多半是**旧链接**的回调。重跑 oci/login.sh 拿新链接，登录后粘新的那条"
+    fi
     printf '登录成功，%s\n' "$(oci session validate --local)"
 }
 
@@ -63,7 +68,7 @@ done
 [[ -n $url ]] || { cat "$LOG" >&2; die "20 秒内没拿到登录链接"; }
 
 cat <<EOF
-在浏览器打开这条链接登录：
+在浏览器打开这条链接登录（每次链接都不同，别用旧标签页里那条）：
 $url
 
 登录完成后的两种走法：
