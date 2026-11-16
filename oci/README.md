@@ -210,6 +210,18 @@ oci ons subscription list --compartment-id $T --topic-id <topic-ocid> --all     
 - **桶里没有对象时该桶不发指标**（官方文档），空桶不会有告警。
 - `StoredBytes` 不含未完成的分片上传（残留要 `oci multipart list` 查）。
 - 邮件订阅创建后是 `PENDING`，**必须点邮件里的确认链接**，否则告警触发也不会送达。
+- `StoredBytes` **大约每小时才有一个数据点**（实测 3 小时窗口只返回 1 个点），所以告警的发现与解除都以小时计，
+  不要指望分钟级。
+
+### 链路测试（2026-11-16 已做一次）
+
+1. 订阅确认后 `lifecycle-state: ACTIVE`；
+2. 把阈值临时降到 `> 1000000`（1 MB）、`pending-duration PT1M` → 约 2 分钟后
+   `oci monitoring alarm-status list-alarms-status` 报 `status: FIRING`；
+3. 立刻改回 `> 8000000000` 与 `PT30M`（`alarm get` 复核 query/pending/severity/enabled 均已恢复）。
+
+结论：告警→ONS→邮件这条链路在 OCI 侧是通的（FIRING 已确认）；**邮箱端是否真收到由收件人确认**。
+注意改配置后状态不会立刻从 FIRING 转 OK，要等下一个数据点。
 
 ## 备份与恢复（2026-11-16）
 
