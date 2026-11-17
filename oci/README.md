@@ -13,8 +13,8 @@ Last Validated: 2026-11-16（PAYG 生效、当月花费、A1 额度两处官方�
 
 | 路径 | 说明 |
 | :--- | :--- |
-| `~/.oci/config` | `600`；profile `DEFAULT`，含 `security_token_file` 与 `key_file` |
-| `~/.oci/sessions/DEFAULT/` | `700`；`token`、`oci_api_key.pem`、`oci_api_key_public.pem` |
+| `~/.oci/config` | `600`；profile **`session`**，含 `security_token_file` 与 `key_file` |
+| `~/.oci/sessions/session/` | `700`；`token`、`oci_api_key.pem`、`oci_api_key_public.pem` |
 
 两者都由 `oci session authenticate` 生成，**每次重新授权都会覆盖**，不要手工往 config 里加字段。
 私钥与 token 不入 Git（`oci/.gitignore` 忽略 `*.pem`）。tenancy / compartment OCID、region、
@@ -231,7 +231,7 @@ oci ons subscription list --compartment-id $T --topic-id <topic-ocid> --all     
 | 层 | 产物 | 位置 | 说明 |
 | :--- | :--- | :--- | :--- |
 | L0 | git 仓库 | GitHub | 代码层，唯一能自动异地的一层 |
-| L1 | `free-arm-<UTC>.tar.zst.gpg` | `~/backups/`（**仅本机**） | 由 `./backup.sh` 生成；实测 252 MB / 解压 4.1 GB |
+| L1 | `free-arm-<UTC>.tar.zst.gpg` | `~/backups/`（**仅本机**） | 由 `./backup.sh` 生成；实测 253 MB / 解压 4.1 GB（含三个库） |
 | L1' | `t7-backup.timer` 每周日 01:30 | 对象存储 `yorches-spec006-t7/daily/` | 仅一个库的 pg_dump + 校验 + 恢复演练 |
 | L3 | `free-arm-baseline-20261116` | OCI 卷备份 | 200 GB FULL，占 1/5 免费名额 |
 
@@ -241,7 +241,7 @@ unit 清单、timers、crontab、自定义 unit 文件）、`portal/config`、`d
 
 为什么排除那四类：`~/.config/orca` 实测 **5.3 GB**，其中 `agent-session-journal.db` 就 3.5 GB、
 `agent-runtimes` 1.0 GB、`orcad-artifacts` 320 MB、`plugins-data` 160 MB —— 后者全可重装，
-只留状态后才压到 252 MB。
+只留状态后才压到 253 MB。
 
 口令：`~/.config/free-arm-backup/passphrase`（600，随机生成）。**必须另存一份到密码管理器** ——
 机器没了就等于备份打不开。加解密：`gpg --batch --symmetric --cipher-algo AES256 --compress-algo none`。
