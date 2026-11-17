@@ -302,7 +302,7 @@ BASE=~/orca_pro/common-task/oci/backup.sh  # 想定时跑就放一条 crontab（
 ### 已知缺口
 
 - L1 只在**本机** `~/backups/`：防误删与配置写坏，不防磁盘/实例丢失。上传需要 OCI 会话（每小时过期）——
-  长期方案是 Instance Principal + 专用桶，见 `<tech_note_ai>/AI-Output/2026-11-16-OCI-free-arm-备份策略调研.md`。
+  长期方案是 Instance Principal + 专用桶，见 `/home/ubuntu/orca_pro/tech_note_ai/AI-Output/2026-11-16-OCI-free-arm-备份策略调研.md`（Mac 上是 `~/Code/tech_note_ai/AI-Output/…`）。
 - 三个 postgres 容器的监听是**非默认**的，`backup.sh` 从容器 PID1 的 cmdline 里读端口：
 
   | 容器 | 监听 | 备注 |
