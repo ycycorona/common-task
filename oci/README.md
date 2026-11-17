@@ -157,163 +157,20 @@ Oracle 官方数字（`Always Free Resources` 页，2026-11-16 抓取）：
 | 告警 | `actual-1`、`actual-5`、`actual-25`，均为 `ABSOLUTE` + `ACTUAL`，收件人 `ycy421@gmail.com` |
 | 语义 | 月度预算 + 绝对阈值 → **每月**累计花费跨过阈值时发**一封**，不是每笔都发；评估按天，不是实时 |
 
-**未确认**：budgets 是否把「被 credit 覆盖的用量」算进 actual-spend。Oracle 的 Budgets 文档里 `credit` 出现 0 次；旧的 `name=1` 预算存在 25 天、同期 usage-api 记了 €54，但 `actual-spend` 一直是 `null` —— 与「按 usage 计」矛盾，也支持「只算真扣费」。
-决定性测试：2026-11-17 查新预算的 `actual-spend` —— 若 ≈€34 说明计入（旧预算是自己配坏了），若仍 `null` 则说明 PAYG 下的 budget 要等 2026-11-21 之后才可能触发。在那之前别把它当兜底，改用 `usage-api` 的日成本判断「有没有产生费用」。
+**实测结论（2026-11-17 07:06 收到告警邮件）**：budgets **把 credit 覆盖的用量也算进 actual-spend**。
 
-```sh
-T=<tenancy ocid>
-oci budgets budget budget list --compartment-id $T --all --output table \
-  --query "data[].{name:\"display-name\",amount:amount,period:\"processing-period-type\",end:end_date}"
-oci budgets budget alert-rule list --budget-id <budget-id> --output table
-```
+邮件原文关键字段：`Alert Type: Actual` / `Threshold: €25.00` / `Spend in cycle: €35.17` /
+`Forecast: €62.10` / `Time in cycle: 17 / 30 days`。而同期 `usage-api` 的 11 月 COST 是 €34.30（差一天的量），
+两者一致 —— 也就是说 €35.17 里包含仍由 free trial credit 支付的部分（credit 到 2026-11-20 23:59Z 才用完）。
 
-- 命令是三层嵌套：`oci budgets budget budget …` / `oci budgets budget alert-rule …`（CLI 3.96.2 如此）。
-- **同一个 target compartment 只允许一个 budget**：直接再建会报
-  `N budgets already exist in target compartment`。旧的那个（名 `1`、`SINGLE_USE`、2026-11-22 到期、
-  阈值 €25/100/200/240 + forecast €250）已删除后才建成新的。
-- `--recipients` 用裸值（`--recipients ycy421@gmail.com`）；写成 `'["…"]'` 会报 `Invalid recipients`。
-- `--targets` 是 `list[str]`，写对象数组会让 CLI 报 `Unable to process JSON input`；
-  正确形状：`--targetType COMPARTMENT --targets '["<tenancy-ocid>"]'`。
-- 阈值是**绝对金额**（`--threshold-type ABSOLUTE`），要按百分比就换 `PERCENTAGE` + `--threshold 50`。
+两个直接后果：
 
-## 监控与告警（2026-11-16）
+1. **这三档告警是"用量闹钟"，不是"扣钱闹钟"**：试用期内一样会响。想判断"是否真从卡上扣钱"，只能看
+   `end-date`（2026-11-20T23:59:59Z）之后的数据，或控制台的 credit 余额。
+2. 记录里那次 `Forecast: €62.10` 与实测日均 €2.18 × 30 ≈ €65 基本吻合，可作为量级校验。
 
-分三层，覆盖的额度不同：
-
-| 层 | 监控什么 | 机制 | 状态 |
-| :--- | :--- | :--- | :--- |
-| 容量 | 桶大小 vs 免费额度（Standard/IA/Archive 各 10 GB） | Monitoring 告警，namespace `oci_objectstorage`，指标 `StoredBytes`（bytes） | ✅ 已建 `bucket-size-8g` |
-| 费用 | 任何超量的钱 | Budget `payg-monthly-150` 的 €1 / €5 / €25 三档 | ✅ 已建；`actual-spend` 是否计入 credit 覆盖的用量**未确认** |
-| 请求数 | 50,000 请求/月 | `usage-api` 的 `Object Storage - Requests` SKU（单位 10K） | 只有查询，无告警；本月实测 0.0139 ≈ 139 次 |
-
-### 已建的容量告警
-
-| 项 | 值 |
-| :--- | :--- |
-| 告警 | `bucket-size-8g`，`CRITICAL`，ACTIVE |
-| MQL | `StoredBytes[5m].max() > 8000000000`（阈值 8 GB，十进制；免费 Standard 10 GB） |
-| 分辨率 / 等待 | `--resolution 1m`（该指标**只接受 1m**，写 1h 会被拒）、`--pending-duration PT30M`、重复通知 24h |
-| 通知 | ONS 主题 `objectstorage-alerts` → 邮件 `ycy421@gmail.com` |
-
-```sh
-T=<tenancy-ocid>
-oci monitoring metric-data summarize-metrics-data --compartment-id $T --namespace oci_objectstorage \
-  --query-text 'StoredBytes[6h].max()'            # 看当前值；实测与 oci os object list 求和一致（14,650,054）
-oci monitoring metric list --compartment-id $T --namespace oci_objectstorage --all   # 有哪些指标
-oci monitoring alarm list --compartment-id $T --all                                  # 告警清单
-oci ons subscription list --compartment-id $T --topic-id <topic-ocid> --all         # 订阅状态
-```
-
-已知坑：
-
-- 指标 `StoredBytes` 的 dimension 含 `tier=NORMAL`（Standard），换 tier 要分别看。
-- **桶里没有对象时该桶不发指标**（官方文档），空桶不会有告警。
-- `StoredBytes` 不含未完成的分片上传（残留要 `oci multipart list` 查）。
-- 邮件订阅创建后是 `PENDING`，**必须点邮件里的确认链接**，否则告警触发也不会送达。
-- `StoredBytes` **大约每小时才有一个数据点**（实测 3 小时窗口只返回 1 个点），所以告警的发现与解除都以小时计，
-  不要指望分钟级。
-
-### 链路测试（2026-11-16 已做一次）
-
-1. 订阅确认后 `lifecycle-state: ACTIVE`；
-2. 把阈值临时降到 `> 1000000`（1 MB）、`pending-duration PT1M` → 约 2 分钟后
-   `oci monitoring alarm-status list-alarms-status` 报 `status: FIRING`；
-3. 立刻改回 `> 8000000000` 与 `PT30M`（`alarm get` 复核 query/pending/severity/enabled 均已恢复）。
-
-结论：**整条链路已闭环** —— OCI 侧 `FIRING`，收件人 2026-11-16 确认收到 TEST 邮件。
-注意改配置后状态不会立刻从 FIRING 转 OK，要等下一个数据点。
-注意改配置后状态不会立刻从 FIRING 转 OK，要等下一个数据点。
-
-## 备份与恢复（2026-11-16）
-
-### 现在有什么
-
-| 层 | 产物 | 位置 | 说明 |
-| :--- | :--- | :--- | :--- |
-| L0 | git 仓库 | GitHub | 代码层，唯一能自动异地的一层 |
-| L1 | `free-arm-<UTC>.tar.zst.gpg` | `~/backups/`（**仅本机**） | 由 `./backup.sh` 生成；实测 253 MB / 解压 4.1 GB（含三个库） |
-| L1' | `t7-backup.timer` 每周日 01:30 | 对象存储 `yorches-spec006-t7/daily/` | 仅一个库的 pg_dump + 校验 + 恢复演练 |
-| L3 | `free-arm-baseline-20261116` | OCI 卷备份 | 200 GB FULL，占 1/5 免费名额 |
-
-L1 内容：`orca/`（`~/.config/orca`，**排除** `agent-runtimes`、`orcad-artifacts`、`plugins-data`、`logs`）、
-`.ssh`、`.oci`、`.gnupg`、`.config/{magpie,115-util,gh}`、`system/`（fstab、hosts、sshd_config、
-unit 清单、timers、crontab、自定义 unit 文件）、`portal/config`、`db/*.dump`（各 postgres 容器）。
-
-为什么排除那四类：`~/.config/orca` 实测 **5.3 GB**，其中 `agent-session-journal.db` 就 3.5 GB、
-`agent-runtimes` 1.0 GB、`orcad-artifacts` 320 MB、`plugins-data` 160 MB —— 后者全可重装，
-只留状态后才压到 253 MB。
-
-口令：`~/.config/free-arm-backup/passphrase`（600，随机生成）。**必须另存一份到密码管理器** ——
-机器没了就等于备份打不开。加解密：`gpg --batch --symmetric --cipher-algo AES256 --compress-algo none`。
-
-### 文件级恢复（迁到新机或救单个文件）
-
-```sh
-# 1. 解密 + 解包（口令文件从密码管理器取回，不要放进仓库）
-gpg --batch --decrypt --passphrase-file <passphrase> -o /tmp/fa.tar.zst ~/backups/free-arm-<ts>.tar.zst.gpg
-mkdir -p /tmp/fa && tar -C /tmp/fa -xf /tmp/fa.tar.zst
-
-# 2. 按目录对位还原（先备份现场的旧文件）
-rsync -a /tmp/fa/free-arm-<ts>/orca/        ~/.config/orca/
-rsync -a /tmp/fa/free-arm-<ts>/.ssh/        ~/.ssh/
-rsync -a /tmp/fa/free-arm-<ts>/.oci/        ~/.oci/
-rsync -a /tmp/fa/free-arm-<ts>/.config/     ~/.config/
-cp -a  /tmp/fa/free-arm-<ts>/system/*       /etc/          # 逐个看，别整目录覆盖
-cp -a  /tmp/fa/free-arm-<ts>/portal/config/ ~/portal/config/
-
-# 3. 数据库（容器起来之后）
-docker exec -i -u postgres <容器> pg_restore -U postgres -d "$POSTGRES_DB" --clean --if-exists < db/<容器>.dump
-```
-
-单个文件的场景（比如只丢了 `~/.config/orca/profiles/local-default/`）不要重启 Orca，先 `tar -x` 取那一个路径比较安全。
-
-### 卷级恢复（整机重来）
-
-1. `oci bv boot-volume create --source-boot-volume-backup-id <backup-ocid> --size-in-gbs 200 --availability-domain <AD>`
-   —— 注意 `oci bv boot-volume list` 里备份与卷都要在 **home region**。
-2. `oci compute instance launch --shape VM.Standard.A1.Flex --shape-config '{"ocpus":4,"memoryInGBs":24}'`
-   挂这块新卷当引导卷，subnet 与安全列表用原来的（`Default Security List for free-vcn`）。
-3. **A1 可能抢不到容量**：`out of host capacity` 时只能换 AD 重试或等；这正是需要 L4 异地副本的原因。
-4. 起来之后：`tailscale up`（重新登录）、`docker compose up -d`（`~/portal`）、
-   `systemctl start agentsview caddy dashboard-serve komari-agent`、`systemctl list-timers` 核对 `t7-backup`。
-5. 核对：`hostname`、`df -h /`（应 193 G）、`ssh -T git@github.com`、`oci session authenticate`（重登）。
-
-### 保留与清理
-
-| 对象 | 谁清理 | 现状 |
-| :--- | :--- | :--- |
-| 本地 `~/backups/free-arm-*.tar.*` | `backup.sh` 的 `--keep N`（默认 5） | ✅ 自动：跑完只留最近 N 份，只删本脚本命名的文件 |
-| 卷备份（5 个名额） | **人** | ❌ 不自动。手动备份永不自动删/自动增；靠台账控制（建议最多 3 个） |
-| 桶内 `daily/*.dump` | `t7-backup.py` 自带 retention（只删自己前缀） | ✅ 自动 |
-| 将来的备份桶 | Object Lifecycle Policy（OCI 侧执行） | 未配 |
-
-**唯一的"会自己涨"的路径是 Backup Policy**（Bronze/Silver/Gold）：挂上后 OCI 自动打备份，Gold 保留 7 份
-超过免费 5 份就计费。本机目前没有任何东西自动创建卷备份（`crontab -l` 无、无 `boot-volume-backup create`
-调用、systemd timer 只有 `t7-backup`），但**卷上是否已挂策略未验证**（需 token：
-`oci bv volume-backup-policy-assignment list -c <tenancy> --all`）。
-
-```sh
-./backup.sh --keep 5                      # 手动跑一次，自动清理旧产物
-./backup.sh /mnt/other --keep 3            # 换目录 + 换保留份数
-BASE=~/orca_pro/common-task/oci/backup.sh  # 想定时跑就放一条 crontab（无需 sudo）：
-# 0 3 * * 0 BACKUP_PASSPHRASE_FILE=$HOME/.config/free-arm-backup/passphrase $BASE --keep 5 >> $HOME/backups/backup.log 2>&1
-```
-
-### 已知缺口
-
-- L1 只在**本机** `~/backups/`：防误删与配置写坏，不防磁盘/实例丢失。上传需要 OCI 会话（每小时过期）——
-  长期方案是 Instance Principal + 专用桶，见 `/home/ubuntu/orca_pro/tech_note_ai/AI-Output/2026-11-16-OCI-free-arm-备份策略调研.md`（Mac 上是 `~/Code/tech_note_ai/AI-Output/…`）。
-- 三个 postgres 容器的监听是**非默认**的，`backup.sh` 从容器 PID1 的 cmdline 里读端口：
-
-  | 容器 | 监听 | 备注 |
-  | :--- | :--- | :--- |
-  | `yorches-tests` | `127.0.0.1:55452` | trust 认证、**没有挂数据卷**（数据在容器可写层，删容器即丢），2026-11-12 起未重启 |
-  | `yorches-spec006-t8` | `100.126.255.75:55442` | 监听在 Tailscale 地址上；t7 的每周备份就是它 |
-  | `yorches-spec006-test` | 默认 5432 + unix socket | |
-
-  `pg_isready` / `pg_dump` 不带端口时会连默认 5432，于是看起来"服务没在跑" —— 这是 2026-11-16 我误判过的坑。
-  取端口：`docker exec <容器> sh -c "tr '\0' ' ' </proc/1/cmdline"` → 解析 `-c port=NNNN`。
-- 没做过恢复演练：唯一证明是"解一个包、取一个文件、比一次 hash"。
+（此前以为 `actual-spend` 恒为 `null` 说明"不计入 credit"，那是旧预算自己没跑起来 —— 旧预算 `amount: 1.0` +
+绝对阈值 €25…€250 + `SINGLE_USE`，从来没评估过。）
 
 ## 被推翻的方案（2026-11-15）## 被推翻的方案（2026-11-15）
 
