@@ -315,6 +315,20 @@ codex 没有 cwd 目录，读 rollout 首行的 `payload.cwd`。中断产生的�
 窗口和占比照常给）。退出码：0 有列表，1 该路径下没有会话，2 不是目录。
 自检 `python3 agent-sessions/test_agent_sessions.py`。
 
+**口径：表里是“已经发出去的下限”，不是“下一轮还能塞多少”。** 它取最后一次 API 调用的 usage，
+所以已结束的会话就是它的收尾状态，活着的会话少算了还没计入的那一轮（本机实测 161,893 vs 精确值
+166,677，差 3%）。三家都按同一个口径量，所以能横向比较。
+
+要 pi 自己的精确值（下一轮要发的内容），复制会话后走 RPC 问一次（约 1s，**必须用副本**：
+pi 会往文件里补 `session_info`）：
+
+```bash
+cp "$PI_SESSION_FILE" /tmp/x.jsonl && printf '{"type":"get_session_stats"}\n' | pi --mode rpc --session /tmp/x.jsonl
+```
+
+返回 `contextUsage {tokens, contextWindow, percent}`。这条路只适用 pi，混进表里会让 pi 那一列
+悄悄比 claude / codex 高几个百分点，所以没做进脚本。
+
 ---
 
 ## 文档
