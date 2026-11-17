@@ -41,6 +41,7 @@ pip install -r requirements.txt
 | `monitoring/` | Komari 离线/磁盘告警（零依赖，跑在监控宿主上） |
 | `portal/` | 个人开发门户站（free-arm 上的 Homepage 配置：机器与服务入口、状态灯、平台深链） |
 | `ai-compact/` | AI Agent 自动压缩阈值的探测与设置 |
+| `agent-sessions/` | 按路径列出 Agent 会话与上下文用量（claude / pi / codex，零依赖） |
 | [`oci/`](oci/README.md) | Oracle Cloud 账户与资源治理（实例、VCN、块存储、Object Storage 桶；凭据在 `~/.oci`，不入库） |
 | `archives/` | 一次性/归档任务（荷兰超市宣传册等） |
 | `orca-server/`、`orca-windows/` | Orca 无头服务端的更新维护（Linux / Windows） |
@@ -287,6 +288,32 @@ python3 ai-compact/ai_compact.py verify -a codex --expect 300000
 -   **`zed-defaults/zeddefaults.swift`**：把 macOS 默认程序从 VS Code 换成 Zed，
     `zeddefaults selftest|snapshot|apply|revert|list`，说明见 `zed-defaults/README.md`。
 
+
+---
+
+### 10. Agent 会话与上下文用量 (`agent-sessions/agent_sessions.py`)
+
+按一个目录列出 claude / pi / codex 的会话，按最后活跃时间倒序，给出**最后一轮请求占用了多少上下文**
+（`输入含缓存 + 输出`）和它占模型窗口的百分比。直接读各 Agent 自己的会话文件，所以取到的是最新值；
+`agentsview` 的库落后 1–2 分钟，而且只留峰值。
+
+| Agent | 会话文件 | 用量字段 | 窗口来源 |
+| --- | --- | --- | --- |
+| claude | `~/.claude/projects/<路径编码>/<session>.jsonl` | `message.usage` | `~/.claude/cache/model-catalog/*.json` 的 `hard_limit` |
+| pi | `~/.pi/agent/sessions/<路径编码>/<ts>_<id>.jsonl` | `message.usage` | `~/.pi/agent/models.json` 的 `contextWindow` |
+| codex | `~/.codex/sessions/Y/M/D/rollout-*.jsonl` | `token_count.last_token_usage` | 同一条事件里的 `model_context_window` |
+
+```bash
+python3 agent-sessions/agent_sessions.py                  # 当前目录
+python3 agent-sessions/agent_sessions.py ~/Code/sub-pipe  # 指定路径
+python3 agent-sessions/agent_sessions.py -n 20            # 列更多
+```
+
+路径是按各 Agent 自己的编码规则拼出会话目录后精确匹配的（目录名是破坏性编码，不做反向解码）；
+codex 没有 cwd 目录，读 rollout 首行的 `payload.cwd`。中断产生的全零用量记录会跳过；模型未知时
+只显示绝对值、占比写 `-`（codex 的模型名记在离 usage 很远的 `turn_context` 里，这一列显示 `?`，
+窗口和占比照常给）。退出码：0 有列表，1 该路径下没有会话，2 不是目录。
+自检 `python3 agent-sessions/test_agent_sessions.py`。
 
 ---
 
