@@ -14,7 +14,7 @@
 | `SetFile` | `media/replace_audio_silence.py` 保留创建时间 | Xcode Command Line Tools |
 | `ssh` | `download/download_dmm_preview.py --via`、`tools/remote-dir-sync.sh` | macOS 自带 |
 | `screen` | `media/run_whisper_screen.sh`（远端转录任务） | macOS 自带 |
-| `ps`、`lsof` | `devps/devps.py` 的进程与 cwd 探测、`agent-sessions/` 的"活着"列 | macOS 自带 |
+| `ps`、`lsof` | `devps/devps.py` 的进程与 cwd 探测、`agent-sessions/` 的「活」列 | macOS 自带 |
 | `swiftc` | `zed-defaults/` 编译 | Xcode Command Line Tools |
 
 Python 依赖见 [`requirements.txt`](requirements.txt)：`jvav`、`huggingface_hub`、`yt-dlp` 是运行依赖，
