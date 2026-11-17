@@ -1,12 +1,21 @@
 #!/usr/bin/env bash
 # free-arm 状态备份（L1）：Orca/Agent 状态 + 密钥 + 系统配置 + 三个 Postgres 库。
-# 用法：oci/backup.sh [输出目录]      （默认 ~/backups）
+# 用法：oci/backup.sh [输出目录] [--keep N]      （默认 ~/backups，保留 5 份；也认 BACKUP_KEEP）
 # 产出：<输出目录>/free-arm-<UTC时间>.tar.zst（未加密；无 zstd 时退化为 .tar.gz）；给了 BACKUP_PASSPHRASE_FILE 则再 gpg 加密成 .gpg
 # 排除：可重新下载的运行时/产物/插件/日志（~/.config/orca 下 2 GB+ 的部分），否则单份超 5 GB。
 # 说明：SQLite 是拷副本不是热备份一致性快照；要严格一致就先停 Orca。
 set -uo pipefail
 
-OUT=${1:-$HOME/backups}
+OUT=$HOME/backups
+KEEP=${BACKUP_KEEP:-5}
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --keep) KEEP=${2:?--keep 需要一个数字}; shift 2 ;;
+        -h|--help) sed -n '2,8p' "$0"; exit 0 ;;
+        *) OUT=$1; shift ;;
+    esac
+done
+[[ $KEEP =~ ^[0-9]+$ && $KEEP -ge 1 ]] || { echo "错误：--keep 必须是 >=1 的整数" >&2; exit 2; }
 TS=$(date -u +%Y%m%dT%H%M%SZ)
 WORK=$(mktemp -d)
 STAGE="$WORK/free-arm-$TS"
@@ -83,4 +92,14 @@ if [[ -n ${BACKUP_PASSPHRASE_FILE:-} ]]; then
 fi
 
 rm -rf "$WORK"
-printf '备份完成：%s（%s）\n' "$ARCHIVE" "$(du -h "$ARCHIVE" | cut -f1)"
+
+# 7) 保留最近 KEEP 份：只删本脚本命名的产物，按修改时间倒序
+mapfile -t olds < <(find "$OUT" -maxdepth 1 -type f -name 'free-arm-*.tar.*' -printf '%T@ %p\n' 2>/dev/null \
+    | sort -rn | cut -d' ' -f2-)
+if (( ${#olds[@]} > KEEP )); then
+    for f in "${olds[@]:KEEP}"; do
+        rm -f -- "$f" && printf '  清理旧备份：%s\n' "$(basename "$f")"
+    done
+fi
+
+printf '备份完成：%s（%s，目录内保留 %s 份）\n' "$ARCHIVE" "$(du -h "$ARCHIVE" | cut -f1)" "$KEEP"

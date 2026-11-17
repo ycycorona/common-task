@@ -278,6 +278,27 @@ docker exec -i -u postgres <容器> pg_restore -U postgres -d "$POSTGRES_DB" --c
    `systemctl start agentsview caddy dashboard-serve komari-agent`、`systemctl list-timers` 核对 `t7-backup`。
 5. 核对：`hostname`、`df -h /`（应 193 G）、`ssh -T git@github.com`、`oci session authenticate`（重登）。
 
+### 保留与清理
+
+| 对象 | 谁清理 | 现状 |
+| :--- | :--- | :--- |
+| 本地 `~/backups/free-arm-*.tar.*` | `backup.sh` 的 `--keep N`（默认 5） | ✅ 自动：跑完只留最近 N 份，只删本脚本命名的文件 |
+| 卷备份（5 个名额） | **人** | ❌ 不自动。手动备份永不自动删/自动增；靠台账控制（建议最多 3 个） |
+| 桶内 `daily/*.dump` | `t7-backup.py` 自带 retention（只删自己前缀） | ✅ 自动 |
+| 将来的备份桶 | Object Lifecycle Policy（OCI 侧执行） | 未配 |
+
+**唯一的"会自己涨"的路径是 Backup Policy**（Bronze/Silver/Gold）：挂上后 OCI 自动打备份，Gold 保留 7 份
+超过免费 5 份就计费。本机目前没有任何东西自动创建卷备份（`crontab -l` 无、无 `boot-volume-backup create`
+调用、systemd timer 只有 `t7-backup`），但**卷上是否已挂策略未验证**（需 token：
+`oci bv volume-backup-policy-assignment list -c <tenancy> --all`）。
+
+```sh
+./backup.sh --keep 5                      # 手动跑一次，自动清理旧产物
+./backup.sh /mnt/other --keep 3            # 换目录 + 换保留份数
+BASE=~/orca_pro/common-task/oci/backup.sh  # 想定时跑就放一条 crontab（无需 sudo）：
+# 0 3 * * 0 BACKUP_PASSPHRASE_FILE=$HOME/.config/free-arm-backup/passphrase $BASE --keep 5 >> $HOME/backups/backup.log 2>&1
+```
+
 ### 已知缺口
 
 - L1 只在**本机** `~/backups/`：防误删与配置写坏，不防磁盘/实例丢失。上传需要 OCI 会话（每小时过期）——
