@@ -14,7 +14,7 @@
 | `SetFile` | `media/replace_audio_silence.py` 保留创建时间 | Xcode Command Line Tools |
 | `ssh` | `download/download_dmm_preview.py --via`、`tools/remote-dir-sync.sh` | macOS 自带 |
 | `screen` | `media/run_whisper_screen.sh`（远端转录任务） | macOS 自带 |
-| `ps`、`lsof` | `devps/devps.py` 的进程与 cwd 探测 | macOS 自带 |
+| `ps`、`lsof` | `devps/devps.py` 的进程与 cwd 探测、`agent-sessions/` 的"活着"列 | macOS 自带 |
 | `swiftc` | `zed-defaults/` 编译 | Xcode Command Line Tools |
 
 Python 依赖见 [`requirements.txt`](requirements.txt)：`jvav`、`huggingface_hub`、`yt-dlp` 是运行依赖，
@@ -308,6 +308,9 @@ python3 agent-sessions/agent_sessions.py                  # 当前目录
 python3 agent-sessions/agent_sessions.py ~/Code/sub-pipe  # 指定路径
 python3 agent-sessions/agent_sessions.py -n 20            # 列更多
 ```
+
+`活` 列表示"这个目录有 agent 进程在跑（`ps` + `lsof` 取 cwd）**且**这条会话 5 分钟内被写过"；
+只有新文件不算活，同目录有多条会话时无法把进程精确归到某一条（T3 驱动的 pi 每轮还会换进程）。
 
 路径是按各 Agent 自己的编码规则拼出会话目录后精确匹配的（目录名是破坏性编码，不做反向解码）；
 codex 没有 cwd 目录，读 rollout 首行的 `payload.cwd`。中断产生的全零用量记录会跳过；模型未知时

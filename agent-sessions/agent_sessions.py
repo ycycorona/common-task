@@ -20,6 +20,11 @@ zero-usage turns from interrupted requests are skipped. The window comes from
 codex's own `model_context_window`, pi's models.json, or claude's cached model
 catalog; an unknown model prints `?` instead of a percentage.
 
+The 活 column means "an agent process runs in this directory (macOS ps + lsof)
+and this session was written in the last 5 minutes". A fresh file alone is not
+enough, and a process cannot be pinned to one session when several share the
+directory — T3-driven pi even spawns a new process per turn.
+
 Usage:
   python3 agent-sessions/agent_sessions.py
   python3 agent-sessions/agent_sessions.py ~/Code/sub-pipe
@@ -35,6 +40,7 @@ import glob
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 import unicodedata
@@ -48,6 +54,8 @@ HEAD_BYTES = {"claude": 64 * 1024, "pi": 256 * 1024, "codex": 1024 * 1024}
 TAIL_BYTES = 400 * 1024
 TAIL_LINES = 400
 DEFAULT_LIMIT = 10
+LIVE_WINDOW = 300  # seconds since the last write, for "still running"
+AGENT_BINARIES = {"pi", "claude", "codex"}
 TITLE_WIDTH = 40
 # Injected context is not a session title; skip it and take the next message.
 TITLE_SKIP_PREFIX = ("#", "<", "[", "{")
@@ -88,6 +96,43 @@ def tail_lines(path):
         fh.seek(max(0, fh.tell() - TAIL_BYTES))
         raw = fh.read()
     return raw.decode("utf-8", "replace").splitlines()[-TAIL_LINES:]
+
+
+def agent_pids(ps_output):
+    """PIDs of running agent processes, from `ps -axo pid=,command=` output.
+
+    Matches the first word's basename, so a pi whose kernel name is `node`
+    still counts, while the Claude desktop app (`.../MacOS/Claude`) does not.
+    """
+    pids = []
+    for line in ps_output.splitlines():
+        pid, _, command = line.strip().partition(" ")
+        if command and os.path.basename(command.split()[0]) in AGENT_BINARIES:
+            pids.append(pid)
+    return pids
+
+
+def cwds_from_lsof(lsof_output):
+    """The `n` rows of `lsof ... -d cwd -Fn` output."""
+    return {line[1:] for line in lsof_output.splitlines() if line.startswith("n")}
+
+
+def live_cwds():
+    """cwd of every running claude / pi / codex process (macOS: ps + lsof)."""
+    try:
+        listing = subprocess.run(["ps", "-axo", "pid=,command="],
+                                 capture_output=True, text=True, check=False)
+        pids = agent_pids(listing.stdout)
+        if not pids:
+            return set()
+        query = ["lsof", "-a"]
+        for pid in pids:
+            query += ["-p", pid]
+        found = subprocess.run(query + ["-d", "cwd", "-Fn"],
+                               capture_output=True, text=True, check=False)
+    except OSError:  # ps / lsof missing: report nothing instead of failing
+        return set()
+    return cwds_from_lsof(found.stdout)
 
 
 def text_of(content):
@@ -255,6 +300,7 @@ class Entry(TypedDict):
     """One rendered row: a session's last activity and context usage."""
 
     time: str
+    live: bool
     agent: str
     used: int | None
     window: int | None
@@ -268,6 +314,7 @@ def rows(cwd, limit) -> tuple[int, list[Entry]]:
     found = discover(cwd)
     claude_window = claude_windows()
     pi_window = pi_windows()
+    running = live_cwds()
     out: list[Entry] = []
     for session in found[:limit]:
         used, model, window = probe_usage(session["agent"], session["path"])
@@ -277,6 +324,7 @@ def rows(cwd, limit) -> tuple[int, list[Entry]]:
             window = window or pi_window.get(model or "")
         out.append({
             "time": time.strftime("%m-%d %H:%M", time.localtime(session["mtime"])),
+            "live": cwd in running and time.time() - session["mtime"] < LIVE_WINDOW,
             "agent": session["agent"],
             "used": used,
             "window": window,
@@ -313,7 +361,7 @@ def pad(text, columns, align="left"):
 
 
 def render(target: str, entries: list[Entry], total: int) -> str:
-    table = [["最后活跃", "Agent", "上下文", "占比", "模型", "会话"]]
+    table = [["最后活跃", "活", "Agent", "上下文", "占比", "模型", "会话"]]
     for entry in entries:
         if entry["used"] is None:
             usage, share = "?", "-"
@@ -321,9 +369,9 @@ def render(target: str, entries: list[Entry], total: int) -> str:
             window = entry["window"]
             usage = tokens(entry["used"]) if not window else f"{tokens(entry['used'])}/{tokens(window)}"
             share = f"{round(entry['used'] / window * 100)}%" if window else "-"
-        table.append([entry["time"], entry["agent"], usage, share,
-                      entry["model"] or "?", f"{entry['id']} {entry['title']}"])
-    columns = [max(width(row[i]) for row in table) for i in range(5)] + [TITLE_WIDTH]
+        table.append([entry["time"], "✓" if entry["live"] else "·", entry["agent"],
+                      usage, share, entry["model"] or "?", f"{entry['id']} {entry['title']}"])
+    columns = [max(width(row[i]) for row in table) for i in range(6)] + [TITLE_WIDTH]
     lines = [f"{target}  ({total} 个会话，列出最近 {len(entries)} 个)", ""]
     for index, row in enumerate(table):
         cells = [pad(fit(cell, columns[i]), columns[i]) for i, cell in enumerate(row[:-1])]

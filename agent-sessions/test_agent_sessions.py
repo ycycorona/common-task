@@ -28,6 +28,24 @@ def write_jsonl(path, records):
     return path
 
 
+def test_agent_pids():
+    ps = "\n".join([
+        "  123 pi",
+        "  456 /Users/x/.codex/packages/bin/codex",
+        "  789 /Applications/Claude.app/Contents/MacOS/Claude",  # desktop app, not a session
+        "  790 /Users/x/Library/claude-code/2.1.325/abc/claude.app/Contents/MacOS/claude",
+        "  791 node /Users/x/some-other/tool.js",
+        "  792 /Users/x/.codex/packages/bin/codex app-server",
+    ])
+    assert a.agent_pids(ps) == ["123", "456", "790", "792"]
+
+
+def test_cwds_from_lsof():
+    out = "p123\nfcwd\nn/Users/x/Code/a\np456\nfcwd\nn/Users/x/Code/b\n"
+    assert a.cwds_from_lsof(out) == {"/Users/x/Code/a", "/Users/x/Code/b"}
+    assert a.cwds_from_lsof("") == set()
+
+
 def test_cwd_dir():
     cwd = "/Users/x/Code/pro_shell_for_agents"
     assert a.cwd_dir("claude", cwd) == Path.home() / ".claude/projects/-Users-x-Code-pro-shell-for-agents"
@@ -136,6 +154,8 @@ def test_discover_and_rows():
         ])
         original = a.HOME
         a.HOME = home
+        live = a.live_cwds
+        a.live_cwds = lambda: {cwd}  # pretend an agent process runs in `cwd`
         try:
             found = a.discover(cwd)
             assert sorted(s["agent"] for s in found) == ["claude", "codex", "pi"], found
@@ -146,6 +166,10 @@ def test_discover_and_rows():
             assert by_agent["pi"]["used"] == 10, by_agent["pi"]
             assert by_agent["codex"]["used"] == 500 and by_agent["codex"]["window"] == 1000
             assert by_agent["codex"]["title"] == "codex 问题"
+            assert all(entry["live"] for entry in entries), entries
+            a.live_cwds = lambda: set()
+            _, offline = a.rows(cwd, 10)
+            assert not any(entry["live"] for entry in offline), offline
             assert a.main([cwd]) == 0
             assert a.main([other]) == 0
             assert a.main([str(home / "nope")]) == 2
@@ -155,6 +179,7 @@ def test_discover_and_rows():
             assert a.main([str(home / "empty")]) == 1
         finally:
             a.HOME = original
+            a.live_cwds = live
 
 
 def test_formatting():
@@ -165,9 +190,14 @@ def test_formatting():
     assert a.width("abc") == 3 and a.width("中文") == 4
     assert a.pad("中文", 6) == "中文  "
     assert a.pad("7", 3, "right") == "  7"
-    text = a.render("/x", [{"time": "01-01 00:00", "agent": "pi", "used": None, "window": None,
-                            "model": "", "id": "01a1", "title": ""}], 1)
-    assert "/x  (1 个会话，列出最近 1 个)" in text
+    def entry(live):
+        row: a.Entry = {"time": "01-01 00:00", "live": live, "agent": "pi", "used": None,
+                        "window": None, "model": "", "id": "01a1", "title": ""}
+        return row
+
+    text = a.render("/x", [entry(True), entry(False)], 2)
+    assert "/x  (2 个会话，列出最近 2 个)" in text
+    assert "✓" in text and "·" in text
     assert "01a1" in text and "-" in text
 
 
