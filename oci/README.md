@@ -156,6 +156,7 @@ Oracle 官方数字（`Always Free Resources` 页，2026-11-16 抓取）：
 | budget | `payg-monthly-150`，`amount: 150`（仅作参考，阈值是绝对金额），`processing-period-type: MONTH`，`reset-period: MONTHLY`，**无到期日** |
 | 告警 | `actual-1`、`actual-5`、`actual-25`，均为 `ABSOLUTE` + `ACTUAL`，收件人 `ycy421@gmail.com` |
 | 语义 | 月度预算 + 绝对阈值 → **每月**累计花费跨过阈值时发**一封**，不是每笔都发；评估按天，不是实时 |
+| 多档 | **每档独立发信**：2026-11-17 那一轮评估里 €1 / €5 / €25 三档各来一封（实测 3 封） |
 
 **实测结论（2026-11-17 07:06 收到告警邮件）**：budgets **把 credit 覆盖的用量也算进 actual-spend**。
 
