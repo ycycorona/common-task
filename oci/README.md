@@ -54,7 +54,7 @@ config 里没有 `user` 字段，不带 auth 类型会报 `The config file at ~/
 | region | `eu-amsterdam-1` |
 | tenancy / 根 compartment | `ocid1.tenancy.oc1..aaaaaaaahrfdu7vevsnsmfj4d6r7cup532kasynxjhbwug5edqajzvmcnqta` |
 | Object Storage namespace | `axh5gtcz4wbl` |
-| 实例 | `free-arm`（A1.Flex, RUNNING）、`orc-1`（E5.Flex, RUNNING） |
+| 实例 | `free-arm`（A1.Flex, RUNNING）；`orc-1`（E5.Flex）已于 **2026-11-18 10:1x UTC 终止**，引导卷 `mem-e5` 一并删除（`--preserve-boot-volume false`） |
 | 根 compartment 的桶 | `yorches-spec006-t7`（2026-11-11 创建） |
 
 ```sh
@@ -73,7 +73,7 @@ oci os bucket list -ns axh5gtcz4wbl -c <tenancy-ocid> --output table
 | payment-model | `PAYG`（`FREE_TRIAL` → 升级生效于 `time-updated: 2026-11-15T22:12:59Z`） |
 | 计费起点 | `end-date: 2026-11-20T23:59:59Z` —— credit 到这天为止，之后按卡扣 |
 | 花费 | 10 月 €19.70 + 11 月至今 €34.30 ≈ €54（占 $300 credit 的 ~21%，其余 11-20 作废） |
-| 日耗稳定值 | €2.18094 = `orc-1`（E5.Flex）€2.05344 + `mem-e5` 100 GB 引导卷 €0.1275 |
+| 日耗稳定值 | **关停前**：€2.18094 = `orc-1`（E5.Flex）€2.05344 + `mem-e5` 100 GB 卷 €0.1275；2026-11-18 关停后应为 ≈€0（待 11-19 的 `usage-api` 复核） |
 | 全免项 | `free-arm`（A1 4 OCPU/24 GB）及其 200 GB 卷、VCN、Object Storage、Telemetry |
 
 ### 存储类免费额度与现状（2026-11-16）
@@ -82,7 +82,7 @@ Oracle 官方数字（`Always Free Resources` 页，2026-11-16 抓取）：
 
 | 资源 | Always Free 额度 | 现状 | 判定 |
 | :--- | :--- | :--- | :--- |
-| 块存储（boot + block **合计**） | 200 GB | 300 GB：`free-arm` 200 + `mem-e5` 100 | 超 100 GB = €0.1275/天；删掉 `mem-e5` 后正好 200 |
+| 块存储（boot + block **合计**） | 200 GB | **200 GB**：`free-arm` 200（`mem-e5` 已于 2026-11-18 随实例删除，此前是 300） | 现正好满额、无超额计费 |
 | 卷备份（boot + block 合计，限 home region） | **5 个**（`oci limits value list --service-name block-storage` → `free-backup-count = 5`，与 `total-free-storage-gb = 200` 是**两个独立字段**） | 1 个：`free-arm-baseline-20261116`（200 GB，FULL，AVAILABLE） | 用 1/5。备份按**个数**计，不按 GB；200 GB 全量备份不占那 200 GB 卷额度 |
 | 对象存储（PAYG / 有 credit 的账户） | Standard 10 GB + Infrequent 10 GB + Archive 10 GB，50,000 请求/月 | 桶 `yorches-spec006-t7` 内 14 个对象 / **13.97 MB**（Standard） | 用了 0.14% |
 | MySQL HeatWave（Always Free DB system） | 50 GB 数据 + 50 GB 备份 | 无 DBaaS 实例 | 无关 |
@@ -123,7 +123,7 @@ Oracle 官方数字（`Always Free Resources` 页，2026-11-16 抓取）：
 
 | 资源 | Always Free 额度 | 现状 | 判定 |
 | :--- | :--- | :--- | :--- |
-| 块存储（boot + block **合计**） | 200 GB | 300 GB：`free-arm` 200 + `mem-e5` 100 | 超 100 GB = €0.1275/天；删掉 `mem-e5` 后正好 200 |
+| 块存储（boot + block **合计**） | 200 GB | **200 GB**：`free-arm` 200（`mem-e5` 已于 2026-11-18 随实例删除，此前是 300） | 现正好满额、无超额计费 |
 | 卷备份（boot + block 合计，限 home region） | **5 个**（`oci limits value list --service-name block-storage` → `free-backup-count = 5`，与 `total-free-storage-gb = 200` 是**两个独立字段**） | 1 个：`free-arm-baseline-20261116`（200 GB，FULL，AVAILABLE） | 用 1/5。备份按**个数**计，不按 GB；200 GB 全量备份不占那 200 GB 卷额度 |
 | 对象存储（PAYG / 有 credit 的账户） | Standard 10 GB + Infrequent 10 GB + Archive 10 GB，50,000 请求/月 | 桶 `yorches-spec006-t7` 内 14 个对象 / **13.97 MB**（Standard） | 用了 0.14% |
 | MySQL HeatWave（Always Free DB system） | 50 GB 数据 + 50 GB 备份 | 无 DBaaS 实例 | 无关 |
