@@ -1,19 +1,35 @@
 #!/bin/bash
-# Keep the Mac awake with the lid closed while on AC power, and let the built-in
-# display sleep as soon as the lid closes. Run every 10 s by
-# local.ac-lidsleep.plist; see system/README.md.
+# Keep the Mac awake with the lid closed while on AC power, let the built-in
+# display sleep as soon as the lid closes, and fall back to normal battery
+# behaviour (sleep with the lid shut) when AC is removed.
+# Run every 10 s by local.ac-lidsleep.plist; see system/README.md.
 #
-# Requires a passwordless sudo rule for exactly these two commands, e.g. the
-# file installed by Amphetamine Power Protect:
-#   /usr/bin/pmset -a disablesleep 1
-#   /usr/bin/pmset -a disablesleep 0
+# Requires passwordless sudo for `pmset -a disablesleep 1|0` and `pmset sleepnow`
+# (Amphetamine Power Protect ships the first two).
 set -u
 
 STAMP=/tmp/.ac-lidsleep.closed
+SOURCE=/tmp/.ac-lidsleep.source
 
-# Print 1 for AC power, 0 otherwise. Takes the first line of `pmset -g ps`.
+# AC -> 1, anything else -> 0. Input: first line of `pmset -g ps`.
 desired_disablesleep() {
 	if printf '%s' "$1" | grep -q "AC Power"; then echo 1; else echo 0; fi
+}
+
+source_label() {
+	if [ "$1" = 1 ]; then echo ac; else echo battery; fi
+}
+
+# Sleep only when macOS would have slept at lid close: AC until now, now on
+# battery, lid shut. Plain battery use must not be disturbed.
+should_sleep_on_unplug() {
+	if [ "$1" = ac ] && [ "$2" = battery ] && [ "$3" = Yes ]; then echo 1; else echo 0; fi
+}
+
+lid_state() {
+	# Yes / No / unknown (ioreg hiccup)
+	ioreg -r -k AppleClamshellState -d 4 2>/dev/null |
+		grep -o 'AppleClamshellState" = \(Yes\|No\)' | awk '{print $3}'
 }
 
 apply_disablesleep() {
@@ -26,17 +42,32 @@ apply_disablesleep() {
 	fi
 }
 
+sleep_now() {
+	if [ "${DRY_RUN:-0}" = 1 ]; then
+		echo "would sleepnow"
+		return 0
+	fi
+	if pmset sleepnow 2>/dev/null || sudo -n /usr/bin/pmset sleepnow; then
+		echo "$(date '+%F %T') unplugged with lid closed, sleepnow"
+	else
+		echo "$(date '+%F %T') unplugged with lid closed, sleepnow FAILED" >&2
+		return 1
+	fi
+}
+
 sleep_display_on_lid_close() {
 	# "unknown" (ioreg hiccup) must not clear the stamp, or the next poll re-fires.
-	local state
-	state=$(ioreg -r -k AppleClamshellState -d 4 2>/dev/null | grep -o 'AppleClamshellState" = \(Yes\|No\)' | awk '{print $3}')
-	case "$state" in
+	case "$1" in
 	Yes)
 		# Only once per lid-close; the stamp is removed when the lid opens.
 		if [ ! -f "$STAMP" ]; then
-			pmset displaysleepnow
+			if [ "${DRY_RUN:-0}" = 1 ]; then
+				echo "would displaysleepnow"
+			else
+				pmset displaysleepnow
+				echo "$(date '+%F %T') lid closed, displaysleepnow"
+			fi
 			touch "$STAMP"
-			echo "$(date '+%F %T') lid closed, displaysleepnow"
 		fi
 		;;
 	No)
@@ -46,13 +77,32 @@ sleep_display_on_lid_close() {
 }
 
 main() {
-	local want cur
+	local want src prev lid
 	want=$(desired_disablesleep "$(pmset -g ps | head -1)")
+	src=$(source_label "$want")
+	prev=$(cat "$SOURCE" 2>/dev/null || echo "")
+	lid=$(lid_state)
+
+	if [ "${DRY_RUN:-0}" != 1 ]; then
+		echo "$src" >"$SOURCE"
+	fi
+
+	local cur
 	cur=$(pmset -g | awk '/SleepDisabled/{print $2}')
 	if [ "$cur" != "$want" ]; then
-		apply_disablesleep "$want" "$cur" || exit 1
+		if [ "${DRY_RUN:-0}" = 1 ]; then
+			echo "would disablesleep want=$want (was $cur)"
+		else
+			apply_disablesleep "$want" "$cur" || exit 1
+		fi
 	fi
-	sleep_display_on_lid_close
+
+	if [ "$(should_sleep_on_unplug "$prev" "$src" "$lid")" = 1 ]; then
+		sleep_now || exit 1
+		return 0
+	fi
+
+	sleep_display_on_lid_close "$lid"
 }
 
 # Sourced by test_ac_lidsleep.sh, which must not touch system state.
