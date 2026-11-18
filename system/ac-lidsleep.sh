@@ -22,7 +22,7 @@ source_label() {
 
 # Sleep only when macOS would have slept at lid close: AC until now, now on
 # battery, lid shut. Plain battery use must not be disturbed.
-should_sleep_on_unplug() {
+should_release_on_unplug() {
 	if [ "$1" = ac ] && [ "$2" = battery ] && [ "$3" = Yes ]; then echo 1; else echo 0; fi
 }
 
@@ -42,15 +42,23 @@ apply_disablesleep() {
 	fi
 }
 
-sleep_now() {
-	if [ "${DRY_RUN:-0}" = 1 ]; then
-		echo "would sleepnow"
+# 拔电后不硬睡：只把挡住空闲睡眠的 caffeinate 停掉，让电池的 1 分钟空闲计时器
+# 把机器自然带入睡眠，与 macOS 默认行为一致。不需要 root。
+release_keepawake() {
+	local pids
+	pids=$(pgrep -f 'caffeinate -i -w' | tr '\n' ' ' | sed 's/ $//')
+	if [ -z "$pids" ]; then
+		echo "$(date '+%F %T') unplugged with lid closed, no caffeinate running"
 		return 0
 	fi
-	if pmset sleepnow 2>/dev/null || sudo -n /usr/bin/pmset sleepnow; then
-		echo "$(date '+%F %T') unplugged with lid closed, sleepnow"
+	if [ "${DRY_RUN:-0}" = 1 ]; then
+		echo "would stop caffeinate: $pids"
+		return 0
+	fi
+	if kill $pids 2>/dev/null; then
+		echo "$(date '+%F %T') unplugged with lid closed, stopped caffeinate: $pids"
 	else
-		echo "$(date '+%F %T') unplugged with lid closed, sleepnow FAILED" >&2
+		echo "$(date '+%F %T') unplugged with lid closed, stopping caffeinate FAILED: $pids" >&2
 		return 1
 	fi
 }
@@ -97,8 +105,8 @@ main() {
 		fi
 	fi
 
-	if [ "$(should_sleep_on_unplug "$prev" "$src" "$lid")" = 1 ]; then
-		sleep_now || exit 1
+	if [ "$(should_release_on_unplug "$prev" "$src" "$lid")" = 1 ]; then
+		release_keepawake || exit 1
 		return 0
 	fi
 
