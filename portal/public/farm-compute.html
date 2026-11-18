@@ -25,7 +25,7 @@
   </style>
 </head>
 <body>
-  <nav aria-label="导航"><a href="/">← 开发 Portal</a> · <a href="http://100.117.100.126:8875/docs">orc-1 sub-pipe2 接口文档</a></nav>
+  <nav aria-label="导航"><a href="/">← 开发 Portal</a> · <a href="https://pve-agents-bot-1.taile8af3.ts.net:8875/docs">linux-1 sub-pipe2 接口文档</a></nav>
   <header>
     <h1>Farm PC 算力服务</h1>
     <p class="muted">Windows 11 · RTX 3070 8 GB · Tailscale 100.68.205.95</p>
@@ -48,8 +48,8 @@
   </section>
 
   <section class="panel" aria-labelledby="use-title">
-    <h2 id="use-title">orc-1 sub-pipe2 怎么使用</h2>
-    <p>控制面 <code>http://100.117.100.126:8875</code> 已启用 <code>serve --provider</code>，已登记 <code>farm-pc-uvr</code>、<code>farm-pc-asr</code>、<code>farm-pc-align</code>。本机不加载这些模型。</p>
+    <h2 id="use-title">linux-1 sub-pipe2 怎么使用</h2>
+    <p>控制面 <code>https://pve-agents-bot-1.taile8af3.ts.net:8875</code> 已启用 <code>serve --provider</code>，已登记 <code>farm-pc-uvr</code>、<code>farm-pc-asr</code>、<code>farm-pc-align</code>。本机不加载这些模型。</p>
     <p>人声分离按运行选择，默认关闭。客户端使用 <code>--separate-vocals</code>；HTTP 创建运行时在 <code>params</code> 内传实际 JSON 布尔值：</p>
     <pre><code>{"material_id":"&lt;素材 ID&gt;","language":"ja","until":"segments","params":{"separate_vocals":true}}</code></pre>
     <p>开启后先分离为该运行的 vocals SOURCE，再做 VAD 和后续处理。此项免费；不自动授权转录或翻译的付费云调用。运行详情的 <code>source_kind</code> 应为 <code>vocals</code>。</p>

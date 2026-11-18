@@ -308,7 +308,13 @@ python3 ai-compact/ai_compact.py verify -a codex --expect 300000
 python3 agent-sessions/agent_sessions.py                  # 当前目录
 python3 agent-sessions/agent_sessions.py ~/Code/sub-pipe  # 指定路径
 python3 agent-sessions/agent_sessions.py -n 20            # 列更多
+python3 agent-sessions/agent_sessions.py --json ~/Code/sub-pipe   # 给 Agent / 脚本读
 ```
+
+`--json` 在 stdout 打一个对象 `{path, total, sessions[]}`，`sessions[]` 每项 `time`、`live`、
+`agent`、`used`、`window`（未知为 `null`）、`model`、`id`（完整会话 id）、`file`（会话文件绝对路径）、
+`title`。表格里为好看做过截断（id 取前 8 位、用量写成 `85k`），JSON 里都是原值；无会话时输出
+`sessions: []` 并仍然返回 1。
 
 `活` 列表示"这个目录有 agent 进程在跑（`ps` + `lsof` 取 cwd）**且**这条会话 5 分钟内被写过"；
 只有新文件不算活，同目录有多条会话时无法把进程精确归到某一条（T3 驱动的 pi 每轮还会换进程）。

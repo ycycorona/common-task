@@ -23,9 +23,9 @@
 - 流水线与存储:
     - sub-pipe 工作台:
         icon: mdi-view-dashboard-outline
-        href: http://100.117.100.126:8874/runs/
-        description: orc-1 可视化运行管理 · 用户名 kkk
-        ping: http://100.117.100.126:8874/runs/
+        href: http://100.72.108.125:8874/runs/
+        description: linux-1 可视化运行管理 · 用户名 kkk
+        ping: http://100.72.108.125:8874/runs/
     - sub-pipe 案例台:
         icon: mdi-flask-outline
         href: http://100.126.255.75:8766/
@@ -33,9 +33,9 @@
         ping: http://100.126.255.75:8766/
     - sub-pipe2 接口:
         icon: mdi-subtitles-outline
-        href: http://100.117.100.126:8875/docs
-        description: orc-1 FastAPI 文档 · 已接 Farm PC 算力
-        ping: http://100.117.100.126:8875/v1/openapi.json
+        href: https://pve-agents-bot-1.taile8af3.ts.net:8875/docs
+        description: linux-1 FastAPI 文档 · 已接 Farm PC 算力
+        ping: https://pve-agents-bot-1.taile8af3.ts.net:8875/v1/openapi.json
     - AList 存储网关:
         icon: mdi-folder-network-outline
         href: http://100.89.79.120:5244/

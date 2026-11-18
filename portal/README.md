@@ -22,7 +22,9 @@ cd ~/portal && docker compose up -d          # 首次；之后 yaml 会自动热
 
 **必须 `--exclude=config/logs`，不要用 sudo。** 容器没有配 `user:`，以镜像内 uid 1000 写 `./config`（本机这个 uid 是 `opc`，登录用户 `ubuntu` 是 1001），`config/logs/` 因此不属于 `ubuntu`；`--delete` 删目录内容要目标目录的写权限，会以 `unlink(config/logs/homepage.log): Permission denied`、exit 23 失败。排除这一项即可，其余容器生成文件在 `ubuntu` 可写的 `config/` 下，`--delete` 照常删除。用 sudo 反而会让后续文件属主混成 root。
 
-运行目录另有一份**本机操作贴士** `~/portal/README.md`（常用命令、目录分工、哪些文件是自动生成的空壳），读者是「此刻在这台机器上操作的人」，不随本文件同步。本文件是事实源与换机手册。
+**改完这里的文件，页面不会变。** 页面读的是 `~/portal` 那份拷贝，所以每次改动都要走上面那条 `rsync` + `docker compose up -d`。只想让改动马上生效、又不想跑完整同步时，`cp` 单个文件到 `~/portal/` 再 `docker restart homepage` 也能生效（2026-11-18 把 sub-pipe 两个入口迁到 linux-1 时就是这么做的），但它绕过了 `--delete` 的清理，长期还是用 `rsync`。
+
+运行目录另有一份**本机操作贴士** `~/portal/README.md`（常用命令、目录分工、哪些文件是自动生成的空壳），读者是「此刻在这台机器上操作的人」，不随本文件同步。本文件是事实源与换机手册；换机器时看上面「[首次部署](#首次部署换机器时)」，新增入口时看「[加一个入口](#加一个入口)」。
 
 ## 首次部署（换机器时）
 
