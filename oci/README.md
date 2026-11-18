@@ -54,7 +54,7 @@ config 里没有 `user` 字段，不带 auth 类型会报 `The config file at ~/
 | region | `eu-amsterdam-1` |
 | tenancy / 根 compartment | `ocid1.tenancy.oc1..aaaaaaaahrfdu7vevsnsmfj4d6r7cup532kasynxjhbwug5edqajzvmcnqta` |
 | Object Storage namespace | `axh5gtcz4wbl` |
-| 实例 | `free-arm`（A1.Flex, RUNNING）、`orc-1`（E5.Flex, RUNNING） |
+| 实例 | `free-arm`（A1.Flex, RUNNING）；`orc-1`（E5.Flex）已于 **2026-11-18 10:1x UTC 终止**，引导卷 `mem-e5` 一并删除（`--preserve-boot-volume false`） |
 | 根 compartment 的桶 | `yorches-spec006-t7`（2026-11-11 创建） |
 
 ```sh
@@ -73,7 +73,7 @@ oci os bucket list -ns axh5gtcz4wbl -c <tenancy-ocid> --output table
 | payment-model | `PAYG`（`FREE_TRIAL` → 升级生效于 `time-updated: 2026-11-15T22:12:59Z`） |
 | 计费起点 | `end-date: 2026-11-20T23:59:59Z` —— credit 到这天为止，之后按卡扣 |
 | 花费 | 10 月 €19.70 + 11 月至今 €34.30 ≈ €54（占 $300 credit 的 ~21%，其余 11-20 作废） |
-| 日耗稳定值 | €2.18094 = `orc-1`（E5.Flex）€2.05344 + `mem-e5` 100 GB 引导卷 €0.1275 |
+| 日耗稳定值 | **关停前**：€2.18094 = `orc-1`（E5.Flex）€2.05344 + `mem-e5` 100 GB 卷 €0.1275；2026-11-18 关停后应为 ≈€0（待 11-19 的 `usage-api` 复核） |
 | 全免项 | `free-arm`（A1 4 OCPU/24 GB）及其 200 GB 卷、VCN、Object Storage、Telemetry |
 
 ### 存储类免费额度与现状（2026-11-16）
@@ -82,7 +82,7 @@ Oracle 官方数字（`Always Free Resources` 页，2026-11-16 抓取）：
 
 | 资源 | Always Free 额度 | 现状 | 判定 |
 | :--- | :--- | :--- | :--- |
-| 块存储（boot + block **合计**） | 200 GB | 300 GB：`free-arm` 200 + `mem-e5` 100 | 超 100 GB = €0.1275/天；删掉 `mem-e5` 后正好 200 |
+| 块存储（boot + block **合计**） | 200 GB | **200 GB**：`free-arm` 200（`mem-e5` 已于 2026-11-18 随实例删除，此前是 300） | 现正好满额、无超额计费 |
 | 卷备份（boot + block 合计，限 home region） | **5 个**（`oci limits value list --service-name block-storage` → `free-backup-count = 5`，与 `total-free-storage-gb = 200` 是**两个独立字段**） | 1 个：`free-arm-baseline-20261116`（200 GB，FULL，AVAILABLE） | 用 1/5。备份按**个数**计，不按 GB；200 GB 全量备份不占那 200 GB 卷额度 |
 | 对象存储（PAYG / 有 credit 的账户） | Standard 10 GB + Infrequent 10 GB + Archive 10 GB，50,000 请求/月 | 桶 `yorches-spec006-t7` 内 14 个对象 / **13.97 MB**（Standard） | 用了 0.14% |
 | MySQL HeatWave（Always Free DB system） | 50 GB 数据 + 50 GB 备份 | 无 DBaaS 实例 | 无关 |
@@ -123,7 +123,7 @@ Oracle 官方数字（`Always Free Resources` 页，2026-11-16 抓取）：
 
 | 资源 | Always Free 额度 | 现状 | 判定 |
 | :--- | :--- | :--- | :--- |
-| 块存储（boot + block **合计**） | 200 GB | 300 GB：`free-arm` 200 + `mem-e5` 100 | 超 100 GB = €0.1275/天；删掉 `mem-e5` 后正好 200 |
+| 块存储（boot + block **合计**） | 200 GB | **200 GB**：`free-arm` 200（`mem-e5` 已于 2026-11-18 随实例删除，此前是 300） | 现正好满额、无超额计费 |
 | 卷备份（boot + block 合计，限 home region） | **5 个**（`oci limits value list --service-name block-storage` → `free-backup-count = 5`，与 `total-free-storage-gb = 200` 是**两个独立字段**） | 1 个：`free-arm-baseline-20261116`（200 GB，FULL，AVAILABLE） | 用 1/5。备份按**个数**计，不按 GB；200 GB 全量备份不占那 200 GB 卷额度 |
 | 对象存储（PAYG / 有 credit 的账户） | Standard 10 GB + Infrequent 10 GB + Archive 10 GB，50,000 请求/月 | 桶 `yorches-spec006-t7` 内 14 个对象 / **13.97 MB**（Standard） | 用了 0.14% |
 | MySQL HeatWave（Always Free DB system） | 50 GB 数据 + 50 GB 备份 | 无 DBaaS 实例 | 无关 |
@@ -172,6 +172,33 @@ Oracle 官方数字（`Always Free Resources` 页，2026-11-16 抓取）：
 
 （此前以为 `actual-spend` 恒为 `null` 说明"不计入 credit"，那是旧预算自己没跑起来 —— 旧预算 `amount: 1.0` +
 绝对阈值 €25…€250 + `SINGLE_USE`，从来没评估过。）
+
+### 用 usage-api 核对"某天到底烧了多少钱"（2026-11-18 踩过的坑）
+
+两个粒度会打架，且日行**不保证已物化完**：
+
+- 11-18 当天读日行：`Standard - E5 = 16 OCPU-h`；同时读小时行：`00:00…09:00` 共 **20 OCPU-h**。日行滞后。
+- 判断"日行是否只是没长齐"，要拿**不变量做对照行**，别用随事件变化的那几行做证据。这里的不变量是
+  `Block Volume - Free`（前 200 GB 免费部分）：free-arm 的 200 GB 卷全天都在，理应整日
+  `6.451612903`（=200/31），而 11-18 只有 `2.150537634`（恰 1/3）→ 整张日表只覆盖约 8 小时。
+
+判"某一小时有没有计费"看小时桶的 `time-usage-ended`（桶 `10:00` 覆盖 09:00–10:00）：
+
+| 现象 | 结论 |
+| :--- | :--- |
+| 桶存在且 `qty < 2.0` | 小时级、按实际秒数分账 |
+| 桶不存在 | 末小时截断不计费 |
+| 桶存在且 `qty = 2.0` | 按整小时计，末小时多算 |
+
+**实测结论（2026-11-18 13:44 UTC 复核，数据已物化完整）**：按**秒**分账。
+
+- 日行 11-18（桶标签是 end time，`2026-11-19`）：`Standard - E5 = 20.608333 OCPU-h` ÷ 2 OCPU =
+  **10.3042 h = 10h18m**，与 10:16–10:19 的终止时刻吻合；`Block Volume - Storage = 1.387124` GB-month
+  ÷ 3.2258（整日）= 0.43 → 同样 10.3 h。
+- 小时行：`10:00` 桶（覆盖 09:00–10:00）= `2.0`（整小时在跑）；`11:00` 桶（覆盖 10:00–11:00）=
+  **`0.608333` OCPU-h = 18.25 分钟** —— 落在桶内的部分按比例入账，不是整小时取整、也不是整小时不计。
+- 复核对照：先前 11-18 日行只有 1/3 是因为未物化完；复核时 `Block Volume - Free` 已从 `2.1505` 长到
+  `6.4516`（整日满值），证明"用不变量做对照行"这个判法有效。
 
 ## 被推翻的方案（2026-11-15）## 被推翻的方案（2026-11-15）
 

@@ -14,17 +14,19 @@
 **本目录是配置的唯一来源**，`~/portal` 只是运行副本。改完在这里提交，再同步过去：
 
 ```sh
-rsync -a --delete --exclude=config/logs --exclude=public/host-ports/data.json ~/orca_pro/common-task/portal/ ~/portal/
-cd ~/portal && docker compose up -d          # 首次；之后 yaml 会自动热重载
+rsync -a --delete --exclude=config/logs --exclude=public/host-ports/data.json --exclude=LOCAL-NOTES.md ~/orca_pro/common-task/portal/ ~/portal/
+cd ~/portal && docker compose up -d          # 首次部署用；之后改了 yaml 要 docker restart homepage
 ```
 
-`--delete` 会删掉 `~/portal` 里容器自动生成的东西（空的 `custom.css`、`docker.yaml`、`kubernetes.yaml` 等），容器下次启动会重新生成，因此同步后跟一次 `up -d` 最省事。
+`--delete` 会删掉 `~/portal` 里容器自动生成的东西（空的 `custom.css`、`docker.yaml`、`kubernetes.yaml` 等），容器下次启动会重新生成，因此同步后跟一次 `docker restart homepage` 最省事。
 
 **必须 `--exclude=config/logs`，不要用 sudo。** 容器没有配 `user:`，以镜像内 uid 1000 写 `./config`（本机这个 uid 是 `opc`，登录用户 `ubuntu` 是 1001），`config/logs/` 因此不属于 `ubuntu`；`--delete` 删目录内容要目标目录的写权限，会以 `unlink(config/logs/homepage.log): Permission denied`、exit 23 失败。排除这一项即可，其余容器生成文件在 `ubuntu` 可写的 `config/` 下，`--delete` 照常删除。用 sudo 反而会让后续文件属主混成 root。
 
-**改完这里的文件，页面不会变。** 页面读的是 `~/portal` 那份拷贝，所以每次改动都要走上面那条 `rsync` + `docker compose up -d`。只想让改动马上生效、又不想跑完整同步时，`cp` 单个文件到 `~/portal/` 再 `docker restart homepage` 也能生效（2026-11-18 把 sub-pipe 两个入口迁到 linux-1 时就是这么做的），但它绕过了 `--delete` 的清理，长期还是用 `rsync`。
+**改完这里的文件，页面不会变。** 页面读的是 `~/portal` 那份拷贝，所以每次改动都要走上面那条 `rsync`，再 `docker restart homepage`。只想让改动马上生效、又不想跑完整同步时，`cp` 单个文件到 `~/portal/` 再 `docker restart homepage` 也能生效（2026-11-18 把 sub-pipe 两个入口迁到 linux-1 时就是这么做的），但它绕过了 `--delete` 的清理，长期还是用 `rsync`。
 
-运行目录另有一份**本机操作贴士** `~/portal/README.md`（常用命令、目录分工、哪些文件是自动生成的空壳），读者是「此刻在这台机器上操作的人」，不随本文件同步。本文件是事实源与换机手册；换机器时看上面「[首次部署](#首次部署换机器时)」，新增入口时看「[加一个入口](#加一个入口)」。
+容器在跑时 `docker compose up -d` **不会**重启它：改完后 `/api/services` 会立刻变，但首页 HTML 还是旧的（2026-11-18 实测，卡片删了 5 小时还在）。改完一律 `docker restart homepage`，再用 `curl -s http://100.126.255.75:8790/ | grep -c <旧端口>` 验证**首页**，不要只查 `/api/services`。
+
+运行目录里的 `README.md` 就是本文件的同步副本，**不要在那里改它**，下次 `--delete` 同步会覆盖；要写只属于那台机器的操作贴士，用 `LOCAL-NOTES.md`（已在上面那条 `rsync` 里排除，能活过同步）。2026-11-18 之前这里写的是「本机操作贴士 `README.md`」，实际只是一份过期的同步副本，已纠正。本文件是事实源与换机手册；换机器时看上面「[首次部署](#首次部署换机器时)」，新增入口时看「[加一个入口](#加一个入口)」。
 
 ## 首次部署（换机器时）
 
@@ -47,7 +49,7 @@ curl -sI http://127.0.0.1:8790/ | head -1               # 期望 200
 | `config/widgets.yaml` | 左上角本机 CPU / 内存 / 磁盘 / uptime + 时钟 |
 | `config/bookmarks.yaml` | 底部常用链接 |
 | `config/custom.js` | 按 UA 改写 Orca 卡片的跳转（见下） |
-| `public/farm-compute.html` | Farm PC 算力服务汇总：在线三服务、orc-1 接入、启动限制及未启动安装；只读挂载到 Homepage public |
+| `public/farm-compute.html` | Farm PC 算力服务汇总：在线三服务、控制面接入、启动限制及未启动安装；只读挂载到 Homepage public |
 | `public/host-ports/index.html` | free-arm 本机监听端口与服务快照页，读取同目录 `data.json`；目录只读挂载到 Homepage public |
 | `scripts/collect_host_ports.py` | 采集本机 `ss -H -tlnp` 监听端口并原子写入 `data.json`（不入 Git，由主机定时任务每分钟刷新） |
 
@@ -67,7 +69,7 @@ curl -sI http://127.0.0.1:8790/ | head -1               # 期望 200
 
 ## Farm PC 算力服务
 
-Portal 的「Farm PC 算力」分组链接到 `/farm-compute.html`，页面是 2026-11-07 实机核验快照，不是实时监控。在线服务为 CUDA UVR 人声分离（8703）、CUDA Qwen3-ASR-1.7B（8701）、CPU Qwen3-ForcedAligner-0.6B（8700）；orc-1 的 sub-pipe2（8875）已登记三项并启用 `--provider`，人声分离仍由每次运行的 `--separate-vocals` / `params.separate_vocals=true` 选择。
+Portal 的「Farm PC 算力」分组链接到 `/farm-compute.html`，页面是 2026-11-07 实机核验快照，不是实时监控。在线服务为 CUDA UVR 人声分离（8703）、CUDA Qwen3-ASR-1.7B（8701）、CPU Qwen3-ForcedAligner-0.6B（8700）；linux-1（tailnet 节点 `pve-agents-bot-1`）的 sub-pipe2（8875，HTTPS）已登记三项并启用 `--provider`，人声分离仍由每次运行的 `--separate-vocals` / `params.separate_vocals=true` 选择。
 
 同时记录未启动的 CosyVoice3（启动脚本预设8005）安装（原 Bonsai 27B 安装已清理）。没有为盘点启动它们，也不把安装目录当推理成功。UVR 无开机任务；ASR / 对齐有开机延迟2分钟任务，本轮未重启机器验证。共享 GPU 锁、idle25秒、地址、目录、认证与恢复边界见汇总页。密钥不进页面或配置，三个认证服务不设匿名 HTTP 状态灯，以免把401画成故障。
 
