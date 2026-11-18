@@ -46,6 +46,7 @@ pip install -r requirements.txt
 | `archives/` | 一次性/归档任务（荷兰超市宣传册等） |
 | `orca-server/`、`orca-windows/` | Orca 无头服务端的更新维护（Linux / Windows） |
 | `zed-defaults/` | macOS 默认程序切到 Zed |
+| [`system/`](system/README.md) | macOS 系统层脚本：电源/合盖（`ac-lidsleep.sh` + launchd）等 |
 
 根目录只留 `README.md`、`AGENTS.md`、`requirements.txt` 与各子目录。
 
