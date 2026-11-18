@@ -126,10 +126,6 @@
         icon: mdi-server
         href: ssh://100.126.255.75
         description: OCI A1 aarch64 · 常驻开发机
-    - orc-1:
-        icon: mdi-server-outline
-        href: ssh://100.117.100.126
-        description: OCI E5 x86 · sub-pipe 测试环境
     - farm-pc:
         icon: mdi-desktop-tower-monitor
         href: ssh://100.68.205.95

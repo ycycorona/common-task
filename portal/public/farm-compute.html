@@ -34,7 +34,7 @@
   </header>
 
   <section class="panel" aria-labelledby="active-title">
-    <h2 id="active-title">已接入 orc-1 的三项服务</h2>
+    <h2 id="active-title">已接入 linux-1 的三项服务</h2>
     <div class="scroll"><table>
       <thead><tr><th scope="col">服务与模型</th><th scope="col">接口地址 / 设备</th><th scope="col">限制与启动</th></tr></thead>
       <tbody>
@@ -43,7 +43,7 @@
         <tr id="align"><th scope="row">Qwen3 强制对齐<br><code>qwen3-forced-aligner-0.6b</code></th><td><code>http://100.68.205.95:8700</code><br>CPU / 8 线程</td><td>中 / 日 / 英，80 ms 网格；单条最多 180 秒，每请求最多 600 秒。计划任务 <code>subpipe-farm-align</code>，开机延迟 2 分钟。</td></tr>
       </tbody>
     </table></div>
-    <p>三项服务均需 Bearer 认证，<code>GET /v1/health</code> 未带密钥返回 401 属正常行为。密钥仅由 orc-1 的受保护环境文件引用；Portal 不保存密钥、不配置匿名健康状态灯。</p>
+    <p>三项服务均需 Bearer 认证，<code>GET /v1/health</code> 未带密钥返回 401 属正常行为。密钥仅由 linux-1 的受保护环境文件引用；Portal 不保存密钥、不配置匿名健康状态灯。</p>
     <p>模型空闲 25 秒后退出子进程、释放资源，HTTP 监听继续在线。ASR 与 UVR 共用 <code>F:\subpipe-test\locks\cuda0.lock</code>，按锁串行使用 GPU；占用时另一服务返回 429 / Retry-After。</p>
   </section>
 

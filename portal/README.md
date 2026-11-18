@@ -47,7 +47,7 @@ curl -sI http://127.0.0.1:8790/ | head -1               # 期望 200
 | `config/widgets.yaml` | 左上角本机 CPU / 内存 / 磁盘 / uptime + 时钟 |
 | `config/bookmarks.yaml` | 底部常用链接 |
 | `config/custom.js` | 按 UA 改写 Orca 卡片的跳转（见下） |
-| `public/farm-compute.html` | Farm PC 算力服务汇总：在线三服务、orc-1 接入、启动限制及未启动安装；只读挂载到 Homepage public |
+| `public/farm-compute.html` | Farm PC 算力服务汇总：在线三服务、控制面接入、启动限制及未启动安装；只读挂载到 Homepage public |
 | `public/host-ports/index.html` | free-arm 本机监听端口与服务快照页，读取同目录 `data.json`；目录只读挂载到 Homepage public |
 | `scripts/collect_host_ports.py` | 采集本机 `ss -H -tlnp` 监听端口并原子写入 `data.json`（不入 Git，由主机定时任务每分钟刷新） |
 
@@ -67,7 +67,7 @@ curl -sI http://127.0.0.1:8790/ | head -1               # 期望 200
 
 ## Farm PC 算力服务
 
-Portal 的「Farm PC 算力」分组链接到 `/farm-compute.html`，页面是 2026-11-07 实机核验快照，不是实时监控。在线服务为 CUDA UVR 人声分离（8703）、CUDA Qwen3-ASR-1.7B（8701）、CPU Qwen3-ForcedAligner-0.6B（8700）；orc-1 的 sub-pipe2（8875）已登记三项并启用 `--provider`，人声分离仍由每次运行的 `--separate-vocals` / `params.separate_vocals=true` 选择。
+Portal 的「Farm PC 算力」分组链接到 `/farm-compute.html`，页面是 2026-11-07 实机核验快照，不是实时监控。在线服务为 CUDA UVR 人声分离（8703）、CUDA Qwen3-ASR-1.7B（8701）、CPU Qwen3-ForcedAligner-0.6B（8700）；linux-1（tailnet 节点 `pve-agents-bot-1`）的 sub-pipe2（8875，HTTPS）已登记三项并启用 `--provider`，人声分离仍由每次运行的 `--separate-vocals` / `params.separate_vocals=true` 选择。
 
 同时记录未启动的 CosyVoice3（启动脚本预设8005）安装（原 Bonsai 27B 安装已清理）。没有为盘点启动它们，也不把安装目录当推理成功。UVR 无开机任务；ASR / 对齐有开机延迟2分钟任务，本轮未重启机器验证。共享 GPU 锁、idle25秒、地址、目录、认证与恢复边界见汇总页。密钥不进页面或配置，三个认证服务不设匿名 HTTP 状态灯，以免把401画成故障。
 
