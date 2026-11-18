@@ -18,11 +18,11 @@ rsync -a --delete --exclude=config/logs --exclude=public/host-ports/data.json --
 cd ~/portal && docker compose up -d          # 首次部署用；之后改了 yaml 要 docker restart homepage
 ```
 
-`--delete` 会删掉 `~/portal` 里容器自动生成的东西（空的 `custom.css`、`docker.yaml`、`kubernetes.yaml` 等），容器下次启动会重新生成，因此同步后跟一次 `up -d` 最省事。
+`--delete` 会删掉 `~/portal` 里容器自动生成的东西（空的 `custom.css`、`docker.yaml`、`kubernetes.yaml` 等），容器下次启动会重新生成，因此同步后跟一次 `docker restart homepage` 最省事。
 
 **必须 `--exclude=config/logs`，不要用 sudo。** 容器没有配 `user:`，以镜像内 uid 1000 写 `./config`（本机这个 uid 是 `opc`，登录用户 `ubuntu` 是 1001），`config/logs/` 因此不属于 `ubuntu`；`--delete` 删目录内容要目标目录的写权限，会以 `unlink(config/logs/homepage.log): Permission denied`、exit 23 失败。排除这一项即可，其余容器生成文件在 `ubuntu` 可写的 `config/` 下，`--delete` 照常删除。用 sudo 反而会让后续文件属主混成 root。
 
-**改完这里的文件，页面不会变。** 页面读的是 `~/portal` 那份拷贝，所以每次改动都要走上面那条 `rsync` + `docker compose up -d`。只想让改动马上生效、又不想跑完整同步时，`cp` 单个文件到 `~/portal/` 再 `docker restart homepage` 也能生效（2026-11-18 把 sub-pipe 两个入口迁到 linux-1 时就是这么做的），但它绕过了 `--delete` 的清理，长期还是用 `rsync`。
+**改完这里的文件，页面不会变。** 页面读的是 `~/portal` 那份拷贝，所以每次改动都要走上面那条 `rsync`，再 `docker restart homepage`。只想让改动马上生效、又不想跑完整同步时，`cp` 单个文件到 `~/portal/` 再 `docker restart homepage` 也能生效（2026-11-18 把 sub-pipe 两个入口迁到 linux-1 时就是这么做的），但它绕过了 `--delete` 的清理，长期还是用 `rsync`。
 
 容器在跑时 `docker compose up -d` **不会**重启它：改完后 `/api/services` 会立刻变，但首页 HTML 还是旧的（2026-11-18 实测，卡片删了 5 小时还在）。改完一律 `docker restart homepage`，再用 `curl -s http://100.126.255.75:8790/ | grep -c <旧端口>` 验证**首页**，不要只查 `/api/services`。
 
