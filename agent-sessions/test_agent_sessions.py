@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Self-checks for agent_sessions.py. Run: python3 agent-sessions/test_agent_sessions.py"""
 
+import contextlib
+import io
 import json
 import sys
 import tempfile
@@ -26,6 +28,14 @@ def write_jsonl(path, records):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(json.dumps(r) for r in records) + "\n", encoding="utf-8")
     return path
+
+
+def stdout_of(fn, argv):
+    """Run `fn(*argv)` and return its stdout parsed as JSON."""
+    buffer = io.StringIO()
+    with contextlib.redirect_stdout(buffer):
+        fn(argv)
+    return json.loads(buffer.getvalue())
 
 
 def test_agent_pids():
@@ -176,6 +186,13 @@ def test_discover_and_rows():
             empty = home / "empty"
             assert a.main([str(empty)]) == 2
             empty.mkdir()
+            payload = stdout_of(a.main, ["--json", cwd])
+            assert payload["path"] == cwd and payload["total"] == 3, payload
+            assert sorted(s["agent"] for s in payload["sessions"]) == ["claude", "codex", "pi"]
+            codex = next(s for s in payload["sessions"] if s["agent"] == "codex")
+            assert codex["used"] == 500 and codex["window"] == 1000
+            assert codex["file"].endswith("rollout-2026-01-01T00-00-00-01a2.jsonl"), codex
+            assert stdout_of(a.main, ["--json", str(home / "empty")])["sessions"] == []
             assert a.main([str(home / "empty")]) == 1
         finally:
             a.HOME = original
@@ -192,7 +209,7 @@ def test_formatting():
     assert a.pad("7", 3, "right") == "  7"
     def entry(live):
         row: a.Entry = {"time": "01-01 00:00", "live": live, "agent": "pi", "used": None,
-                        "window": None, "model": "", "id": "01a1", "title": ""}
+                        "window": None, "model": "", "id": "01a1", "file": "/x/s.jsonl", "title": ""}
         return row
 
     text = a.render("/x", [entry(True), entry(False)], 2)

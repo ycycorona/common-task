@@ -29,8 +29,10 @@ Usage:
   python3 agent-sessions/agent_sessions.py
   python3 agent-sessions/agent_sessions.py ~/Code/sub-pipe
   python3 agent-sessions/agent_sessions.py -n 20
+  python3 agent-sessions/agent_sessions.py --json ~/Code/sub-pipe
 
 Exit codes: 0 listed, 1 no session for that path, 2 not a directory.
+Agents and scripts read the output with `--json` (one object on stdout).
 """
 
 from __future__ import annotations
@@ -306,6 +308,7 @@ class Entry(TypedDict):
     window: int | None
     model: str
     id: str
+    file: str
     title: str
 
 
@@ -329,7 +332,8 @@ def rows(cwd, limit) -> tuple[int, list[Entry]]:
             "used": used,
             "window": window,
             "model": (model or "").split("/")[-1],
-            "id": session["id"][:8],
+            "id": session["id"],
+            "file": session["path"],
             "title": title_of(session["agent"], session["path"]),
         })
     return len(found), out
@@ -370,7 +374,7 @@ def render(target: str, entries: list[Entry], total: int) -> str:
             usage = tokens(entry["used"]) if not window else f"{tokens(entry['used'])}/{tokens(window)}"
             share = f"{round(entry['used'] / window * 100)}%" if window else "-"
         table.append([entry["time"], "✓" if entry["live"] else "·", entry["agent"],
-                      usage, share, entry["model"] or "?", f"{entry['id']} {entry['title']}"])
+                      usage, share, entry["model"] or "?", f"{entry['id'][:8]} {entry['title']}"])
     columns = [max(width(row[i]) for row in table) for i in range(6)] + [TITLE_WIDTH]
     lines = [f"{target}  ({total} 个会话，列出最近 {len(entries)} 个)", ""]
     for index, row in enumerate(table):
@@ -386,6 +390,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="按路径列出 Agent 会话与上下文用量")
     parser.add_argument("path", nargs="?", default=".", help="目录，默认当前目录")
     parser.add_argument("-n", "--limit", type=int, default=DEFAULT_LIMIT, help="列出几条，默认 10")
+    parser.add_argument("--json", action="store_true",
+                        help="输出 JSON 而不是表格；Agent 或脚本读取结果时加这个参数")
     args = parser.parse_args(argv)
 
     target = Path(args.path).expanduser().resolve()
@@ -394,10 +400,13 @@ def main(argv=None):
         return 2
     cwd = str(target)
     total, entries = rows(cwd, max(1, args.limit))
+    if args.json:
+        print(json.dumps({"path": cwd, "total": total, "sessions": entries}, ensure_ascii=False))
+    elif entries:
+        print(render(cwd, entries, total))
     if not entries:
         print(f"{cwd} 下没有找到 claude / pi / codex 的会话", file=sys.stderr)
         return 1
-    print(render(cwd, entries, total))
     return 0
 
 
