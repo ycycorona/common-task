@@ -14,7 +14,7 @@
 **本目录是配置的唯一来源**，`~/portal` 只是运行副本。改完在这里提交，再同步过去：
 
 ```sh
-rsync -a --delete --exclude=config/logs --exclude=public/host-ports/data.json ~/orca_pro/common-task/portal/ ~/portal/
+rsync -a --delete --exclude=config/logs --exclude=public/host-ports/data.json --exclude=LOCAL-NOTES.md ~/orca_pro/common-task/portal/ ~/portal/
 cd ~/portal && docker compose up -d          # 首次；之后 yaml 会自动热重载
 ```
 
@@ -24,7 +24,7 @@ cd ~/portal && docker compose up -d          # 首次；之后 yaml 会自动热
 
 **改完这里的文件，页面不会变。** 页面读的是 `~/portal` 那份拷贝，所以每次改动都要走上面那条 `rsync` + `docker compose up -d`。只想让改动马上生效、又不想跑完整同步时，`cp` 单个文件到 `~/portal/` 再 `docker restart homepage` 也能生效（2026-11-18 把 sub-pipe 两个入口迁到 linux-1 时就是这么做的），但它绕过了 `--delete` 的清理，长期还是用 `rsync`。
 
-运行目录另有一份**本机操作贴士** `~/portal/README.md`（常用命令、目录分工、哪些文件是自动生成的空壳），读者是「此刻在这台机器上操作的人」，不随本文件同步。本文件是事实源与换机手册；换机器时看上面「[首次部署](#首次部署换机器时)」，新增入口时看「[加一个入口](#加一个入口)」。
+运行目录里的 `README.md` 就是本文件的同步副本，**不要在那里改它**，下次 `--delete` 同步会覆盖；要写只属于那台机器的操作贴士，用 `LOCAL-NOTES.md`（已在上面那条 `rsync` 里排除，能活过同步）。2026-11-18 之前这里写的是「本机操作贴士 `README.md`」，实际只是一份过期的同步副本，已纠正。本文件是事实源与换机手册；换机器时看上面「[首次部署](#首次部署换机器时)」，新增入口时看「[加一个入口](#加一个入口)」。
 
 ## 首次部署（换机器时）
 
