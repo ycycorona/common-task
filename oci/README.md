@@ -11,10 +11,19 @@ Last Validated: 2026-11-16（PAYG 生效、当月花费、A1 额度两处官方�
 不留长期 API key。凭据是浏览器登录换来的 **session token**，默认 60 分钟有效（上限也是 60，
 `--session-expiration-in-minutes` 范围 5–60，写在 `oci_cli/cli_session.py` 里）。
 
-| 路径 | 说明 |
-| :--- | :--- |
-| `~/.oci/config` | `600`；profile **`session`**，含 `security_token_file` 与 `key_file` |
-| `~/.oci/sessions/session/` | `700`；`token`、`oci_api_key.pem`、`oci_api_key_public.pem` |
+| 路径 | 权限 | 说明 |
+| :--- | :--- | :--- |
+| `~/.oci/` | `700` | 上级目录也要收：`oci session authenticate` 生成时是 `775`，其他人能列目录名（`config`/`token` 本身 600 不泄露内容，但目录不该开） |
+| `~/.oci/sessions/` | `700` | 同上，同样是 `775` 出生 |
+| `~/.oci/config` | `600` | profile **`session`**，含 `security_token_file` 与 `key_file` |
+| `~/.oci/sessions/session/` | `700` | `token`、`oci_api_key.pem`、`oci_api_key_public.pem` |
+
+重新授权后如果目录又变回 `775`，收一次即可（不影响 CLI）：
+
+```sh
+chmod 700 ~/.oci ~/.oci/sessions && stat -c '%A %n' ~/.oci ~/.oci/sessions
+oci iam region list >/dev/null && echo api-ok      # 确认收权限后 token 仍可读
+```
 
 两者都由 `oci session authenticate` 生成，**每次重新授权都会覆盖**，不要手工往 config 里加字段。
 私钥与 token 不入 Git（`oci/.gitignore` 忽略 `*.pem`）。tenancy / compartment OCID、region、
