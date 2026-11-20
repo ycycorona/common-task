@@ -18,7 +18,8 @@ export OCI_CLI_PROFILE=$PROFILE
 
 die() { printf '错误：%s\n' "$*" >&2; exit 1; }
 # --local 只看到期时间，验不出签名错配；两个都过才算真可用
-valid() { oci session validate --local >/dev/null 2>&1 && oci iam region list >/dev/null 2>&1; }
+# 会话过期时 CLI 会交互式追问"Do you want to re-authenticate?"并卡住，所有调用都要 </dev/null
+valid() { oci session validate --local </dev/null >/dev/null 2>&1 && oci iam region list </dev/null >/dev/null 2>&1; }
 
 deliver() {
     local raw=$1 tok
@@ -49,7 +50,7 @@ if [[ $# -gt 0 ]]; then
 fi
 
 if valid; then
-    oci session validate --local
+    oci session validate --local </dev/null
     exit 0
 fi
 
@@ -90,18 +91,6 @@ $url
 
 最后手段：从标准输入喂回调（不进 history / ps，但 token 会出现在屏幕上）
   oci/login.sh -   # 回车后粘贴那条 http://localhost:$PORT/#security_token=...
-
-授权进程 pid=$bgpid，日志 $LOG。它不会自己超时；放弃时 pkill -f 'oci session authenticate'。
-EOF
-在浏览器打开这条链接登录（每次链接都不同，别用旧标签页里那条）：
-$url
-
-登录完成后的两种走法：
-  A. 已经开着隧道（在 Mac 上 ssh -L $PORT:127.0.0.1:$PORT free-arm）：会自动完成，再跑一次 oci/login.sh 看到期时间。
-  B. 没隧道、页面停在 "This site can't be reached"：把地址栏里那条
-     http://localhost:$PORT/#security_token=...
-     整条复制，然后跑
-     oci/login.sh 'http://localhost:$PORT/#security_token=...'
 
 授权进程 pid=$bgpid，日志 $LOG。它不会自己超时；放弃时 pkill -f 'oci session authenticate'。
 EOF
