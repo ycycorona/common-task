@@ -82,7 +82,7 @@ oci os bucket list -ns axh5gtcz4wbl -c <tenancy-ocid> --output table
 | payment-model | `PAYG`（`FREE_TRIAL` → 升级生效于 `time-updated: 2026-11-15T22:12:59Z`） |
 | 计费起点 | `end-date: 2026-11-20T23:59:59Z` —— credit 到这天为止，之后按卡扣 |
 | 花费 | 10 月 €19.70 + 11 月至今 €34.30 ≈ €54（占 $300 credit 的 ~21%，其余 11-20 作废） |
-| 日耗稳定值 | **关停前**：€2.18094 = `orc-1`（E5.Flex）€2.05344 + `mem-e5` 100 GB 卷 €0.1275；**2026-11-18（删机当天）实测 €0.93645** = E5 €0.57497 + Memory €0.30665 + Block €0.03290 + Perf €0.02193，即整日 €2.18094 的 43%（= 10h18m / 24h，与 10:16–10:19 终止时刻一致）；11-19 起应为 €0 |
+| 日耗稳定值 | **关停前**：€2.18094 = `orc-1`（E5.Flex）€2.05344 + `mem-e5` 100 GB 卷 €0.1275；**2026-11-18（删机当天）实测 €0.93645** = E5 €0.57497 + Memory €0.30665 + Block €0.03290 + Perf €0.02193，即整日 €2.18094 的 43%（= 10h18m / 24h，与 10:16–10:19 终止时刻一致）；**2026-11-19 整天实测 €0.00000**（桶 `2026-11-20`：`Standard - E5`/`E5 - Memory`/`Block Volume - Storage`/`Performance Units` 全部缺席，合计 €0；同日 `A1 = 96 OCPU-h`、`Block Volume - Free = 6.4516` 证明已满 24 h）|
 | 全免项 | `free-arm`（A1 4 OCPU/24 GB）及其 200 GB 卷、VCN、Object Storage、Telemetry |
 
 ### 存储类免费额度与现状（2026-11-16）
@@ -216,9 +216,11 @@ Oracle 官方数字（`Always Free Resources` 页，2026-11-16 抓取）：
 - **日桶稳定落后约 2 h**：11-19 08:12 UTC 时，距终止已 22 h，而桶里 `A1` 的 25 OCPU-h ÷ 4 = 6.25 h、
   `A1 - Memory` 150 ÷ 24 = 6.25 h，`8.27 − 6.25 ≈ 2.0 h`。写结论时用"桶落后约 2 h"而不是"当前覆盖 6.25 h"，
   否则容易被读成"数据只有 6 小时"。
-- 11-19 现状（08:12 UTC，桶 `2026-11-20` 落后约 2 h）：`Standard - E5`、`E5 - Memory`、
-  `Block Volume - Storage`、`Performance Units` **均未出现（= 0）**，`Standard - A1` 25 OCPU-h / €0、
-  `A1 - Memory` 150 GB-h / €0。整天归零仍需次日复核。
+- **11-19 整天定稿：€0.00000**（2026-11-20 08:16 UTC 复核，桶 `2026-11-20`）：
+  `Standard - E5`、`E5 - Memory`、`Block Volume - Storage`、`Block Volume - Performance Units` **全部缺席**；
+  同日 `Standard - A1 = 96.0 OCPU-h`（= 4 OCPU × 24 h）、`A1 - Memory = 576 GB-h`（= 24 GB × 24 h）、
+  `Block Volume - Free = 6.451612903224`（= 200 GB 整日）—— 三项都指向"该桶已覆盖满 24 小时"，
+  所以"归零"不是因为没采到数据，而是真的没有计费项。对照关停前 €2.18094/天，机器成本已完全停止。
 
 ## 被推翻的方案（2026-11-15）
 
