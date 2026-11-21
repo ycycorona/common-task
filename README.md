@@ -42,7 +42,7 @@ pip install -r requirements.txt
 | `portal/` | 个人开发门户站（free-arm 上的 Homepage 配置：机器与服务入口、状态灯、平台深链） |
 | `ai-compact/` | AI Agent 自动压缩阈值的探测与设置 |
 | `agent-sessions/` | 按路径列出 Agent 会话与上下文用量（claude / pi / codex，零依赖） |
-| [`antigravity-accounts/`](antigravity-accounts/README.md) | Orca Chat 模式 AntiGravity 账号凭据（`acp_token.json`）保存、校验与安全切换（零依赖） |
+| [`antigravity-accounts/`](antigravity-accounts/README.md) | Orca Chat（`acp_token.json`）与 `agy` CLI（`antigravity-oauth-token`）AntiGravity 账号凭据保存、校验与安全切换（零依赖） |
 | [`oci/`](oci/README.md) | Oracle Cloud 账户与资源治理（实例、VCN、块存储、Object Storage 桶；凭据在 `~/.oci`，不入库） |
 | `archives/` | 一次性/归档任务（荷兰超市宣传册等） |
 | `orca-server/`、`orca-windows/` | Orca 无头服务端的更新维护（Linux / Windows） |
