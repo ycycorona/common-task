@@ -137,11 +137,17 @@ class Sandbox:
         )
         return proc.returncode, proc.stdout, proc.stderr
 
-    def run_inproc(self, argv: list[str], extra_env: dict[str, str] | None = None) -> tuple[int, str, str]:
+    def run_inproc(
+        self, argv: list[str], extra_env: dict[str, str] | None = None, probe: str = "absent"
+    ) -> tuple[int, str, str]:
         old_env = os.environ.copy()
+        old_probe = aa.probe_secret_service
         out = io.StringIO()
         err = io.StringIO()
         try:
+            aa.probe_secret_service = lambda *a, **k: aa.SecretServiceProbe(
+                probe, "test-stub", "stubbed by test"
+            )
             os.environ["HOME"] = str(self.home)
             os.environ["GEMINI_HOME"] = str(self.gemini_home)
             os.environ["AGY_ACCOUNTS_DIR"] = str(self.vault)
@@ -150,6 +156,7 @@ class Sandbox:
             with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
                 rc = aa.main(argv)
         finally:
+            aa.probe_secret_service = old_probe
             os.environ.clear()
             os.environ.update(old_env)
         return rc, out.getvalue(), err.getvalue()
@@ -750,7 +757,7 @@ def test_cli_use_switch_backup_and_dry_run() -> None:
         sb.cleanup()
 
 
-def test_cli_use_blocks_live_agy_and_keyring() -> None:
+def test_cli_use_blocks_live_agy() -> None:
     sb = Sandbox()
     proc_match = None
     proc_other = None
@@ -812,33 +819,6 @@ def test_cli_use_blocks_live_agy_and_keyring() -> None:
         proc_match.terminate()
         proc_match.wait(timeout=3)
         proc_match = None
-
-        # 4. Active Linux Secret Service keyring blocks unless keyring-unavailable marker exists
-        if sys.platform.startswith("linux"):
-            bin_dir = sb.root / "mock_bin"
-            bin_dir.mkdir()
-            dbus_mock = bin_dir / "dbus-send"
-            dbus_mock.write_text("#!/bin/sh\necho '   boolean true'\n", encoding="utf-8")
-            os.chmod(dbus_mock, 0o755)
-            kr_env = {
-                "PATH": f"{bin_dir}:{os.environ.get('PATH', '/usr/bin:/bin')}",
-                "AGY_TEST_KEYRING_CHECK": "1",
-                "DBUS_SESSION_BUS_ADDRESS": "unix:path=/tmp/fake-bus",
-                "SSH_TTY": "",
-                "SSH_CLIENT": "",
-                "SSH_CONNECTION": "",
-                "WSL_DISTRO_NAME": "",
-                "WSL_INTEROP": "",
-            }
-            rc, _, err = sb.run_cli(["use", "cli-b", "--surface", "cli"], extra_env=kr_env)
-            assert rc == 2 and "keyring" in err, f"expected keyring gate refusal, got rc={rc}: {err}"
-
-            marker = sb.cli_dir / "cache" / "antigravity-keyring-unavailable"
-            marker.parent.mkdir(parents=True, exist_ok=True)
-            marker.write_text("1\n", encoding="utf-8")
-            rc, _, err = sb.run_cli(["use", "cli-b", "--surface", "cli"], extra_env=kr_env)
-            assert rc == 0, f"keyring-unavailable marker should allow switch: {err}"
-            assert sb.live_cli_token.read_bytes() == cli_b
     finally:
         for p in (proc_match, proc_other, proc_remote):
             if p is not None:
@@ -847,6 +827,76 @@ def test_cli_use_blocks_live_agy_and_keyring() -> None:
                     p.wait(timeout=3)
                 except subprocess.TimeoutExpired:
                     p.kill()
+        sb.cleanup()
+
+
+def test_cli_keyring_fail_closed() -> None:
+    # The marker file belongs to the Orca daemon, not agy; it must never gate a switch here.
+    assert not hasattr(aa, "CLI_KEYRING_MARKER_REL")
+
+    class _Res:
+        def __init__(self, code: int, out: str = "", err: str = "") -> None:
+            self.returncode, self.stdout, self.stderr = code, out, err
+
+    def runner(code: int, out: str = "", err: str = "", boom: bool = False):
+        def run(argv, **kwargs):
+            assert kwargs["timeout"] == aa.SECRET_SERVICE_TIMEOUT_S
+            if boom:
+                raise subprocess.TimeoutExpired(argv[0], kwargs["timeout"])
+            return _Res(code, out, err)
+
+        return run
+
+    present = aa.probe_secret_service(runner(0, "(true,)\n"))
+    assert present.verdict == "present" and present.source.startswith("gdbus")
+    absent = aa.probe_secret_service(runner(0, "(false,)\n"))
+    assert absent.verdict == "absent" and "false" in absent.detail
+    unknown = aa.probe_secret_service(runner(0, boom=True))
+    assert unknown.verdict == "unknown" and "TimeoutExpired" in unknown.detail
+    failed = aa.probe_secret_service(runner(1, err="Failed to connect to socket"))
+    assert failed.verdict == "unknown" and "退出码 1" in failed.detail
+
+    sb = Sandbox()
+    try:
+        cli_a = make_fake_cli_token("CLI_REFRESH_KR_A", "CLI_ACCESS_KR_A")
+        cli_b = make_fake_cli_token("CLI_REFRESH_KR_B", "CLI_ACCESS_KR_B")
+        sb.write_live_cli(cli_a)
+        assert sb.run_inproc(["save", "cli-a", "--surface", "cli"])[0] == 0
+        sb.write_live_cli(cli_b)
+        assert sb.run_inproc(["save", "cli-b", "--surface", "cli"])[0] == 0
+
+        # present -> refuse, live file untouched
+        rc, _, err = sb.run_inproc(["use", "cli-a", "--surface", "cli"], probe="present")
+        assert rc == 2 and "Secret Service" in err and "--assume-file-store" in err, err
+        assert sb.live_cli_token.read_bytes() == cli_b
+
+        # unknown -> also refuse (fail-closed), with the probe failure reason
+        rc, _, err = sb.run_inproc(["use", "cli-a", "--surface", "cli"], probe="unknown")
+        assert rc == 2 and "探测失败" in err and "test-stub" in err, err
+        assert sb.live_cli_token.read_bytes() == cli_b
+
+        # absent -> switch allowed
+        rc, out, err = sb.run_inproc(["use", "cli-a", "--surface", "cli"], probe="absent")
+        assert rc == 0, err
+        assert sb.live_cli_token.read_bytes() == cli_a
+
+        # --dry-run prints the verdict and its source
+        rc, out, _ = sb.run_inproc(
+            ["use", "cli-b", "--surface", "cli", "--dry-run"], probe="absent"
+        )
+        assert rc == 0 and "Secret Service 探测：absent" in out and "test-stub" in out, out
+        assert sb.live_cli_token.read_bytes() == cli_a
+
+        # --assume-file-store overrides the gate and warns
+        rc, out, err = sb.run_inproc(
+            ["use", "cli-b", "--surface", "cli", "--assume-file-store"], probe="present"
+        )
+        assert rc == 0, err
+        assert "警告" in out and "密钥库" in out, out
+        assert sb.live_cli_token.read_bytes() == cli_b
+        for secret in ("CLI_REFRESH_KR_A", "CLI_ACCESS_KR_A", "CLI_REFRESH_KR_B", "CLI_ACCESS_KR_B"):
+            assert secret not in out + err
+    finally:
         sb.cleanup()
 
 
@@ -958,7 +1008,8 @@ def main() -> int:
     check("legacy_chat_vault_compat_and_migration", test_legacy_chat_vault_compat_and_migration)
     check("cli_save_list_current_and_permissions", test_cli_save_list_current_and_permissions)
     check("cli_use_switch_backup_and_dry_run", test_cli_use_switch_backup_and_dry_run)
-    check("cli_use_blocks_live_agy_and_keyring", test_cli_use_blocks_live_agy_and_keyring)
+    check("cli_use_blocks_live_agy", test_cli_use_blocks_live_agy)
+    check("cli_keyring_fail_closed", test_cli_keyring_fail_closed)
     check("cli_verify_http_flow_and_redaction", test_cli_verify_http_flow_and_redaction)
     if FAILS:
         print(f"\n{len(FAILS)} check(s) failed: {', '.join(FAILS)}")

@@ -18,7 +18,8 @@ Two surfaces:
    scoping), not CLI's own login token. On headless Linux without `org.freedesktop.secrets`,
    `agy` falls back to file storage (`antigravity-oauth-token`) without keyring.
    Safety gate: refuses `use` while any matching `agy` CLI process (excluding `agy_acp_server`
-   and `agy remote-control`) is running, or if an active OS keyring backend is detected.
+   and `agy remote-control`) is running, and unless a live Secret Service is *proven absent*
+   (fail-closed: `present` or `unknown` both refuse; `--assume-file-store` overrides at own risk).
 
 Vault layout (default: ~/.config/antigravity-accounts, 0700):
   <surface>/<label>/<token_file>   0600, raw byte copy of the credential file
@@ -42,7 +43,6 @@ import json
 import os
 import pwd
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -66,7 +66,12 @@ CHAT_TOKEN_FILENAME = "acp_token.json"
 
 CLI_REL_DIR = Path(".gemini") / "antigravity-cli"
 CLI_TOKEN_FILENAME = "antigravity-oauth-token"
-CLI_KEYRING_MARKER_REL = Path("cache") / "antigravity-keyring-unavailable"
+
+# `cache/antigravity-keyring-unavailable` inside the CLI dir is NOT read or written by `agy`: it is
+# the Orca daemon's marker meaning "Orca cannot verify which credential store agy will use". Never
+# use it as a gate here; the real signal is a Secret Service probe below.
+SECRET_SERVICE_NAME = "org.freedesktop.secrets"
+SECRET_SERVICE_TIMEOUT_S = 5.0
 
 # Extracted from `~/.local/bin/agy` (`cli/backend/auth/auth.getOauthParams`) so `verify --surface cli`
 # can exchange `refresh_token` -> `access_token` -> Google `userinfo` without spending model quota.
@@ -556,51 +561,77 @@ def filter_conflicting_cli_processes(
     return conflicts
 
 
-def _detect_active_cli_keyring(cli_dir: Path) -> str | None:
-    """Return a reason string if `agy` CLI would use an active OS keyring instead of file storage."""
-    if os.environ.get("AGY_NO_KEYRING_CHECK"):
-        return None
-    if not _is_real_user_home() and not os.environ.get("AGY_TEST_KEYRING_CHECK"):
-        return None
-    if (cli_dir / CLI_KEYRING_MARKER_REL).exists():
-        return None
-    for env_key in ("SSH_TTY", "SSH_CLIENT", "SSH_CONNECTION", "WSL_DISTRO_NAME", "WSL_INTEROP"):
-        if os.environ.get(env_key):
-            return None
+@dataclass(frozen=True)
+class SecretServiceProbe:
+    """Result of probing the session bus for `org.freedesktop.secrets`."""
 
-    if sys.platform == "darwin":
-        return "macOS Keychain（未检测到 SSH bypass 或 antigravity-keyring-unavailable 标记）"
+    verdict: str  # "present" | "absent" | "unknown"
+    source: str  # command probed (or why nothing could be probed)
+    detail: str  # short stdout/error summary, never contains credentials
 
-    if sys.platform.startswith("linux"):
-        if not os.environ.get("DBUS_SESSION_BUS_ADDRESS", "").strip():
-            return None
-        dbus_send = shutil.which("dbus-send")
-        if dbus_send:
-            try:
-                res = subprocess.run(
-                    [
-                        dbus_send,
-                        "--session",
-                        "--dest=org.freedesktop.DBus",
-                        "--type=method_call",
-                        "--print-reply",
-                        "/org/freedesktop/DBus",
-                        "org.freedesktop.DBus.NameHasOwner",
-                        "string:org.freedesktop.secrets",
-                    ],
-                    capture_output=True,
-                    text=True,
-                    timeout=2.0,
-                    check=False,
-                )
-                if res.returncode == 0:
-                    if "boolean true" in res.stdout:
-                        return "Linux Secret Service（D-Bus org.freedesktop.secrets 正在运行）"
-                    if "boolean false" in res.stdout:
-                        return None
-            except (OSError, subprocess.TimeoutExpired):
-                pass
-    return None
+
+# (kind, argv) probed in order; the first determinate answer wins.
+_SECRET_SERVICE_PROBES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "gdbus",
+        (
+            "gdbus", "call", "--session", "--dest", "org.freedesktop.DBus",
+            "--object-path", "/org/freedesktop/DBus",
+            "--method", "org.freedesktop.DBus.NameHasOwner", SECRET_SERVICE_NAME,
+        ),
+    ),
+    ("busctl", ("busctl", "--user", "--no-pager", "list")),
+)
+
+
+def probe_secret_service(
+    runner: Any = None, timeout: float = SECRET_SERVICE_TIMEOUT_S
+) -> SecretServiceProbe:
+    """Return present/absent/unknown for a usable Secret Service; any failure is `unknown`."""
+    run = runner or subprocess.run
+    failures: list[str] = []
+    for kind, argv in _SECRET_SERVICE_PROBES:
+        try:
+            res = run(list(argv), capture_output=True, text=True, timeout=timeout, check=False)
+        except (OSError, subprocess.SubprocessError) as exc:
+            failures.append(f"{kind}: {type(exc).__name__}")
+            continue
+        stdout = (res.stdout or "").strip()
+        stderr = (res.stderr or "").strip()
+        if res.returncode != 0:
+            failures.append(f"{kind}: 退出码 {res.returncode} {stderr[:100]}".rstrip())
+            continue
+        if kind == "gdbus":
+            if "true" in stdout:
+                return SecretServiceProbe("present", " ".join(argv), stdout[:100])
+            if "false" in stdout:
+                return SecretServiceProbe("absent", " ".join(argv), stdout[:100])
+            failures.append(f"gdbus: 无法解析输出 {stdout[:100]}")
+            continue
+        if SECRET_SERVICE_NAME in stdout:
+            return SecretServiceProbe("present", " ".join(argv), f"列表含 {SECRET_SERVICE_NAME}")
+        return SecretServiceProbe(
+            "absent", " ".join(argv), f"会话总线列表不含 {SECRET_SERVICE_NAME}"
+        )
+    return SecretServiceProbe(
+        "unknown",
+        "探测命令全部失败" if failures else "无可用探测命令（gdbus / busctl 均不可用）",
+        "；".join(failures) if failures else "未找到 gdbus 或 busctl",
+    )
+
+
+def keyring_gate_message(probe: SecretServiceProbe) -> str:
+    """Explain why a non-`absent` probe blocks a file-replacement switch."""
+    if probe.verdict == "present":
+        why = f"检测到 Secret Service（{probe.source} → {probe.detail}）"
+    else:
+        why = f"探测失败，无法确认本机凭据存储（{probe.source} → {probe.detail}）"
+    return (
+        f"拒绝切换 CLI：{why}。\n"
+        "此时 agy 可能把凭据搬进密钥库，仅替换 "
+        f"{CLI_TOKEN_FILENAME} 不保证生效（甚至两份存储各存一半）。\n"
+        "如需继续，请加 `--assume-file-store` 明确承担该风险；或改用 `agy auth login` 重新登录目标账号。"
+    )
 
 
 def _is_real_user_home() -> bool:
@@ -1223,6 +1254,7 @@ def cmd_use(args: argparse.Namespace) -> int:
 
     _ensure_surface_anchor(target, "切换")
 
+    keyring_probe: SecretServiceProbe | None = None
     if surface == "chat":
         conflicts = filter_conflicting_processes(find_live_acp_processes(), target.live_dir)
         if conflicts:
@@ -1235,13 +1267,9 @@ def cmd_use(args: argparse.Namespace) -> int:
             lines.append("原因：运行中的会话在内存缓存凭据，刷新 token 时会把旧账号写回文件覆盖本次切换；本脚本不会自动杀掉会话。")
             raise AccountError("\n".join(lines), exit_code=2)
     else:
-        keyring_reason = _detect_active_cli_keyring(target.live_dir)
-        if keyring_reason:
-            raise AccountError(
-                f"拒绝切换 CLI：检测到活跃系统 keyring（{keyring_reason}）。\n"
-                f"仅替换 {target.live_token} 无法覆盖 keyring 中缓存的旧凭据；请改用 `agy auth login` 或确认系统无活跃 keyring 后再操作。",
-                exit_code=2,
-            )
+        keyring_probe = probe_secret_service()
+        if keyring_probe.verdict != "absent" and not getattr(args, "assume_file_store", False):
+            raise AccountError(keyring_gate_message(keyring_probe), exit_code=2)
         cli_conflicts = filter_conflicting_cli_processes(find_live_cli_processes(), target.target_user_home)
         if cli_conflicts:
             lines = [
@@ -1273,16 +1301,34 @@ def cmd_use(args: argparse.Namespace) -> int:
             else:
                 payload["cli_dir"] = str(target.live_dir)
                 payload["auth_method"] = target_info.auth_method
+                if keyring_probe is not None:
+                    payload["secret_service"] = {
+                        "verdict": keyring_probe.verdict,
+                        "source": keyring_probe.source,
+                        "detail": keyring_probe.detail,
+                        "assume_file_store": bool(getattr(args, "assume_file_store", False)),
+                    }
             print(json.dumps(payload, ensure_ascii=False, indent=2))
         else:
             auth_part = f", auth={target_info.auth_method}" if surface == "cli" else ""
-            proc_name = "live agy_acp_server.par 进程" if surface == "chat" else "live agy CLI 进程（且无活跃 keyring）"
+            proc_name = (
+                "live agy_acp_server.par 进程"
+                if surface == "chat"
+                else "live agy CLI 进程（且 Secret Service 探测为 absent）"
+            )
             print(
                 f"[dry-run] 目标账号 [{surface}]：{label} "
                 f"(fp={target_info.short_fp}, project_id={target_info.project_id or '-'}{auth_part})"
             )
             print(f"[dry-run] 目标路径：{target.live_token}（来源：{target.home_source}）")
             print(f"[dry-run] 阻塞检查：无匹配的 {proc_name}")
+            if keyring_probe is not None:
+                print(
+                    f"[dry-run] Secret Service 探测：{keyring_probe.verdict} "
+                    f"（来源：{keyring_probe.source}；输出：{keyring_probe.detail}）"
+                )
+                if keyring_probe.verdict != "absent":
+                    print("[dry-run] 风险：已按 --assume-file-store 放行；agy 可能仍用密钥库，本次切换不保证生效。")
             print(f"[dry-run] 若执行，将先备份现有文件到 {backup_root}/，再原子替换并回读校验。")
         return 0
 
@@ -1337,6 +1383,11 @@ def cmd_use(args: argparse.Namespace) -> int:
             print("提示：请重开 Antigravity Chat 会话后生效（不需要重启 Orca）。")
         else:
             print("提示：请重新启动 agy CLI 会话后生效（不影响 agy remote-control serve 与 Chat 会话）。")
+            if keyring_probe is not None and keyring_probe.verdict != "absent":
+                print(
+                    f"警告：Secret Service 探测为 {keyring_probe.verdict}，已按 --assume-file-store 继续；"
+                    "若 agy 实际使用密钥库，本次切换可能不生效。"
+                )
     return 0
 
 
@@ -1619,6 +1670,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_use = sub.add_parser("use", parents=[common], help="切换 live 凭据到指定已保存账号")
     p_use.add_argument("label", help="目标账号标签")
     p_use.add_argument("--dry-run", action="store_true", help="仅检查并打印计划，不写入文件")
+    p_use.add_argument(
+        "--assume-file-store",
+        dest="assume_file_store",
+        action="store_true",
+        help=(
+            "即使探测到 Secret Service 或无法排除（unknown）也按文件存储切换；仅在确认 agy 实际使用"
+            " antigravity-oauth-token 文件时使用，风险是凭据可能其实在密钥库、本次切换不生效"
+        ),
+    )
     p_use.set_defaults(func=cmd_use)
 
     p_ver = sub.add_parser("verify", parents=[common], help="用 refresh_token 换取 userinfo 邮箱（零模型额度）")
