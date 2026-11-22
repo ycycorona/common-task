@@ -712,14 +712,14 @@ def test_cli_use_switch_backup_and_dry_run() -> None:
         assert sb.run_inproc(["save", "cli-b", "--surface", "cli"])[0] == 0
 
         # Dry run
-        rc, out, err = sb.run_inproc(["use", "cli-a", "--surface", "cli", "--dry-run"])
+        rc, out, err = sb.run_inproc(["use", "cli-a", "--surface", "cli", "--allow-cli-use", "--dry-run"])
         assert rc == 0, err
         assert "[dry-run]" in out and "[cli]" in out
         assert sb.live_cli_token.read_bytes() == cli_b
         assert not (sb.vault / "cli" / "_backup").exists()
 
         # Real switch cli-b -> cli-a
-        rc, out, err = sb.run_inproc(["use", "cli-a", "--surface", "cli"])
+        rc, out, err = sb.run_inproc(["use", "cli-a", "--surface", "cli", "--allow-cli-use"])
         assert rc == 0, err
         assert "直接在原终端重新跑 agy 即可" in out
         for secret in ("CLI_REFRESH_A", "CLI_ACCESS_A", "CLI_REFRESH_B", "CLI_ACCESS_B"):
@@ -748,7 +748,7 @@ def test_cli_use_switch_backup_and_dry_run() -> None:
 
         aa.atomic_write_bytes = corrupting_write
         try:
-            rc, _, err = sb.run_inproc(["use", "cli-b", "--surface", "cli"])
+            rc, _, err = sb.run_inproc(["use", "cli-b", "--surface", "cli", "--allow-cli-use"])
         finally:
             aa.atomic_write_bytes = orig_atomic
         assert rc != 0 and "回滚" in err
@@ -791,7 +791,7 @@ def test_cli_use_blocks_live_agy() -> None:
             env={"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(sb.home)},
         )
         time.sleep(0.15)
-        rc, _, err = sb.run_inproc(["use", "cli-a", "--surface", "cli"])
+        rc, _, err = sb.run_inproc(["use", "cli-a", "--surface", "cli", "--allow-cli-use"])
         assert rc == 0, f"remote-control / other HOME should not block: {err}"
         assert sb.live_cli_token.read_bytes() == cli_a
 
@@ -810,7 +810,7 @@ def test_cli_use_blocks_live_agy() -> None:
         assert rc == 0
         assert json.loads(out)["live_process_count"] == 1
 
-        rc, _, err = sb.run_inproc(["use", "cli-b", "--surface", "cli"])
+        rc, _, err = sb.run_inproc(["use", "cli-b", "--surface", "cli", "--allow-cli-use"])
         assert rc == 2, f"expected exit 2 when live agy CLI process exists, got {rc}: {err}"
         assert str(proc_match.pid) in err
         assert "cli-live-sess-42" in err
@@ -866,35 +866,74 @@ def test_cli_keyring_fail_closed() -> None:
         assert sb.run_inproc(["save", "cli-b", "--surface", "cli"])[0] == 0
 
         # present -> refuse, live file untouched
-        rc, _, err = sb.run_inproc(["use", "cli-a", "--surface", "cli"], probe="present")
+        rc, _, err = sb.run_inproc(["use", "cli-a", "--surface", "cli", "--allow-cli-use"], probe="present")
         assert rc == 2 and "Secret Service" in err and "--assume-file-store" in err, err
         assert sb.live_cli_token.read_bytes() == cli_b
 
         # unknown -> also refuse (fail-closed), with the probe failure reason
-        rc, _, err = sb.run_inproc(["use", "cli-a", "--surface", "cli"], probe="unknown")
+        rc, _, err = sb.run_inproc(["use", "cli-a", "--surface", "cli", "--allow-cli-use"], probe="unknown")
         assert rc == 2 and "探测失败" in err and "test-stub" in err, err
         assert sb.live_cli_token.read_bytes() == cli_b
 
         # absent -> switch allowed
-        rc, out, err = sb.run_inproc(["use", "cli-a", "--surface", "cli"], probe="absent")
+        rc, out, err = sb.run_inproc(["use", "cli-a", "--surface", "cli", "--allow-cli-use"], probe="absent")
         assert rc == 0, err
         assert sb.live_cli_token.read_bytes() == cli_a
 
         # --dry-run prints the verdict and its source
         rc, out, _ = sb.run_inproc(
-            ["use", "cli-b", "--surface", "cli", "--dry-run"], probe="absent"
+            ["use", "cli-b", "--surface", "cli", "--allow-cli-use", "--dry-run"], probe="absent"
         )
         assert rc == 0 and "Secret Service 探测：absent" in out and "test-stub" in out, out
         assert sb.live_cli_token.read_bytes() == cli_a
 
         # --assume-file-store overrides the gate and warns
         rc, out, err = sb.run_inproc(
-            ["use", "cli-b", "--surface", "cli", "--assume-file-store"], probe="present"
+            ["use", "cli-b", "--surface", "cli", "--allow-cli-use", "--assume-file-store"], probe="present"
         )
         assert rc == 0, err
         assert "警告" in out and "密钥库" in out, out
         assert sb.live_cli_token.read_bytes() == cli_b
         for secret in ("CLI_REFRESH_KR_A", "CLI_ACCESS_KR_A", "CLI_REFRESH_KR_B", "CLI_ACCESS_KR_B"):
+            assert secret not in out + err
+    finally:
+        sb.cleanup()
+
+
+def test_cli_use_disabled_by_default() -> None:
+    # Owner decision 2026-11-22: CLI account switching happens in the Orca UI; the script refuses.
+    sb = Sandbox()
+    try:
+        cli_a = make_fake_cli_token("CLI_REFRESH_OFF_A", "CLI_ACCESS_OFF_A", id_token_email="a@example.com")
+        cli_b = make_fake_cli_token("CLI_REFRESH_OFF_B", "CLI_ACCESS_OFF_B", id_token_email="b@example.com")
+        sb.write_live_cli(cli_a)
+        assert sb.run_inproc(["save", "cli-a", "--surface", "cli"])[0] == 0
+        sb.write_live_cli(cli_b)
+        assert sb.run_inproc(["save", "cli-b", "--surface", "cli"])[0] == 0
+
+        # Refused by default, with the same exit code as the live-process block (2).
+        rc, out, err = sb.run_inproc(["use", "cli-a", "--surface", "cli"])
+        assert rc == 2, f"expected refusal exit 2, got {rc}: {out}{err}"
+        assert aa.CLI_SWITCH_DISABLED_MESSAGE in err, err
+        assert "Orca UI" in err and "current/list/save" in err
+        assert sb.live_cli_token.read_bytes() == cli_b
+        assert not (sb.vault / "cli" / "_backup").exists()
+
+        # --dry-run does not write either, but it is still a `use`: refused unless allowed.
+        rc, _, err = sb.run_inproc(["use", "cli-a", "--surface", "cli", "--dry-run"])
+        assert rc == 2 and aa.CLI_SWITCH_DISABLED_MESSAGE in err, err
+        assert sb.live_cli_token.read_bytes() == cli_b
+
+        # Explicit escape hatch: the original backup + atomic replace flow still works.
+        rc, out, err = sb.run_inproc(["use", "cli-a", "--surface", "cli", "--allow-cli-use"])
+        assert rc == 0, err
+        assert "已切换当前账号 [cli]" in out
+        assert sb.live_cli_token.read_bytes() == cli_a
+        assert _mode(sb.live_cli_token) == 0o600
+        backups = sorted((sb.vault / "cli" / "_backup").iterdir())
+        assert len(backups) == 1 and backups[0].name.endswith("-cli-b")
+        assert (backups[0] / "antigravity-oauth-token").read_bytes() == cli_b
+        for secret in ("CLI_REFRESH_OFF_A", "CLI_ACCESS_OFF_A", "CLI_REFRESH_OFF_B", "CLI_ACCESS_OFF_B"):
             assert secret not in out + err
     finally:
         sb.cleanup()
@@ -1009,6 +1048,7 @@ def main() -> int:
     check("cli_save_list_current_and_permissions", test_cli_save_list_current_and_permissions)
     check("cli_use_switch_backup_and_dry_run", test_cli_use_switch_backup_and_dry_run)
     check("cli_use_blocks_live_agy", test_cli_use_blocks_live_agy)
+    check("cli_use_disabled_by_default", test_cli_use_disabled_by_default)
     check("cli_keyring_fail_closed", test_cli_keyring_fail_closed)
     check("cli_verify_http_flow_and_redaction", test_cli_verify_http_flow_and_redaction)
     if FAILS:

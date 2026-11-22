@@ -20,5 +20,6 @@ principles、Validation and Git、Task closeout 全部适用。下面只写这�
   - `cli` 检查**真实探测**的 Secret Service 结论（`gdbus call … NameHasOwner org.freedesktop.secrets`，回退 `busctl --user --no-pager list`，每条 `timeout 5s`）以及目标 `HOME` 下的 live `agy` 进程（仅排除 `agy_acp_server*` 与 `agy remote-control`）。
   - Secret Service 门禁默认 fail-closed：只有 `absent` 放行；`present`（密钥库可能接管凭据）与 `unknown`（探测失败）都拒绝，退出码 `2`；唯一显式放行开关是 `--assume-file-store`（必须打印风险警告）。探测逻辑保持 `probe_secret_service(runner=…)` 可注入，方便自检模拟三种结论。
   - `cache/antigravity-keyring-unavailable` 是 **Orca daemon 的标记**，不是 `agy` 写的，禁止再把它当门禁（历史死条件已删除；真机 `agy` 二进制里也没有这个字符串）。
+- **禁止把 `use --surface cli` 改回默认放行**：主人 2026-11-22 决定 CLI 账号切换在 Orca UI 里做，脚本侧默认拒绝（退出码 `2`，与活进程阻塞同口径），只有 `--allow-cli-use` 显式放行，且放行前必须先停 `antigravity-cli-daemon.service`（否则 `agy remote-control serve` 会把旧凭据写回）。新需求默认走 Orca UI。
 - 账号库按表面分目录 `<vault>/<surface>/<label>/`（并保持对旧版 Chat 扁平目录 `<vault>/<label>/acp_token.json` 的只读识别与 `save --force` 迁移）。替换前必须把现有 live 文件备份到 `<vault>/<surface>/_backup/<timestamp>-<label|unknown>/`，再用同目录临时文件 + `os.replace` 原子替换并保持 `0600`/`0700` 权限，随后回读校验指纹。
 - 自检必须全部在 `/tmp` 沙箱里跑（注入 `HOME`、`GEMINI_HOME`、`AGY_ACCOUNTS_DIR`、`AGY_TOKEN_URI`、`AGY_USERINFO_URL`），**绝不在测试里读写真实 `~/.gemini/...`、`~/.config/antigravity/...`、`~/.config/orca/...` 或真实账号库**。

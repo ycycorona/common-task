@@ -20,6 +20,10 @@ Two surfaces:
    Safety gate: refuses `use` while any matching `agy` CLI process (excluding `agy_acp_server`
    and `agy remote-control`) is running, and unless a live Secret Service is *proven absent*
    (fail-closed: `present` or `unknown` both refuse; `--assume-file-store` overrides at own risk).
+   Switching: `use --surface cli` is refused by default — CLI account switching happens in the Orca UI;
+   `current` / `list` / `save` / `verify` still work. `--allow-cli-use` re-enables the backup + atomic
+   replace flow, but stop `antigravity-cli-daemon.service` first, otherwise `agy remote-control serve`
+   writes the old credential back over the switch.
 
 Vault layout (default: ~/.config/antigravity-accounts, 0700):
   <surface>/<label>/<token_file>   0600, raw byte copy of the credential file
@@ -31,7 +35,7 @@ Usage:
   agy-account save <label> [--surface chat|cli] [--note TEXT] [--email EMAIL] [--force]
   agy-account list [--surface chat|cli] [--json]
   agy-account current [--surface chat|cli] [--json]
-  agy-account use <label> [--surface chat|cli] [--dry-run] [--json]
+  agy-account use <label> [--surface chat|cli] [--allow-cli-use] [--dry-run] [--json]
   agy-account verify [label] [--surface chat|cli] [--update-email] [--json]
 """
 
@@ -66,6 +70,12 @@ CHAT_TOKEN_FILENAME = "acp_token.json"
 
 CLI_REL_DIR = Path(".gemini") / "antigravity-cli"
 CLI_TOKEN_FILENAME = "antigravity-oauth-token"
+
+# Owner decision 2026-11-22: CLI account switching moved to the Orca UI; this script only reads and saves.
+CLI_SWITCH_DISABLED_MESSAGE = (
+    "拒绝：CLI 表面的账号切换已按主人要求关闭（改由 Orca UI 管理）。"
+    "请到 Orca 里切换 AntiGravity CLI 账号；本脚本仍可用 --surface cli 查看/备份（current/list/save）。"
+)
 
 # `cache/antigravity-keyring-unavailable` inside the CLI dir is NOT read or written by `agy`: it is
 # the Orca daemon's marker meaning "Orca cannot verify which credential store agy will use". Never
@@ -1235,6 +1245,9 @@ def _backup_live_token(
 
 def cmd_use(args: argparse.Namespace) -> int:
     surface = validate_surface(getattr(args, "surface", None))
+    if surface == "cli" and not getattr(args, "allow_cli_use", False):
+        print(CLI_SWITCH_DISABLED_MESSAGE, file=sys.stderr)
+        return 2
     label = validate_label(args.label)
     vault = resolve_vault_dir(args.vault)
     target = _resolve_surface_target(surface, args.home)
@@ -1673,9 +1686,20 @@ def build_parser() -> argparse.ArgumentParser:
     p_cur = sub.add_parser("current", parents=[common], help="只读报告当前 live 凭据指纹与对应账号")
     p_cur.set_defaults(func=cmd_current)
 
-    p_use = sub.add_parser("use", parents=[common], help="切换 live 凭据到指定已保存账号")
+    p_use = sub.add_parser(
+        "use", parents=[common], help="切换 live 凭据到指定已保存账号（CLI 表面默认拒绝，需 --allow-cli-use）"
+    )
     p_use.add_argument("label", help="目标账号标签")
     p_use.add_argument("--dry-run", action="store_true", help="仅检查并打印计划，不写入文件")
+    p_use.add_argument(
+        "--allow-cli-use",
+        dest="allow_cli_use",
+        action="store_true",
+        help=(
+            "仅当主人明确要求用脚本切 CLI 时使用：放行 `use --surface cli`（默认拒绝，改由 Orca UI 管理）。"
+            "切换前必须先停 antigravity-cli-daemon.service，否则 agy remote-control serve 会把旧凭据写回"
+        ),
+    )
     p_use.add_argument(
         "--assume-file-store",
         dest="assume_file_store",

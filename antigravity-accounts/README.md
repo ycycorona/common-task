@@ -11,10 +11,15 @@ Orca **Chat 模式**与 **`agy` CLI** 的 AntiGravity 账号凭据保存、查�
 | Keyring 行为 | 非 macOS 上强制文件后端，不走 keyring | `agy` 优先尝试 keyring，无 `org.freedesktop.secrets` 时回落到文件；`use` 只有**探测到 Secret Service 确实不存在**才放行（`present`/`unknown` 一律拒绝） |
 | 不需切换的文件 | `settings.json` | `~/.config/antigravity/credential-user-scope`（仅 `authstore` 插件/MCP 隔离用）、`antigravity_state.pbtxt`、`cache/`、`last_check.timestamp` |
 | `use` 阻塞检查 | 目标 `GEMINI_HOME` 下正在运行的 `agy_acp_server.par` | 目标 `HOME` 下正在运行的 `agy` CLI（排除 `agy_acp_server*` 与 `agy remote-control`） |
-| 生效方式 | 切完直接在原会话继续（Chat）/ 重新跑 `agy`（CLI）；**不需要**重启 Orca、**不需要**另开新会话 | 切完直接在原终端重新跑 `agy`（原会话继续亦可）；**不需要**重启、**不需要**另开新会话 |
+| 生效方式 | 切完直接在原会话继续（Chat）/ 重新跑 `agy`（CLI）；**不需要**重启 Orca、**不需要**另开新会话 | CLI 侧切换**默认关闭**（改由 Orca UI 切换，见下方 IMPORTANT）；带 `--allow-cli-use` 放行时：切完直接在原终端重新跑 `agy`、**不需要**重启 |
 
 > [!NOTE]
 > 为什么需要它：Orca 原生 `orca account` 只管 CLI 表面且在裸金属 Linux（非 SSH/WSL）上会直接拒绝切换；Chat 表面只有登录流程、没有切换已保存账号的入口。`--surface cli` 实测确认在无 Secret Service 的 Linux 宿主上，替换 `antigravity-oauth-token` 单文件即可完成账号切换。
+
+> [!IMPORTANT]
+> **CLI 表面的切换已关闭（主人 2026-11-22 决定）**：CLI 账号切换统一在 **Orca UI** 里做，`use --surface cli` 默认直接拒绝（退出码 `2`，与活进程阻塞同一口径），提示语指向 Orca。脚本侧 `current` / `list` / `save` / `verify` 照旧可用——只读查看与备份不需要切换权限。
+>
+> 逃生开关 `--allow-cli-use` 才走原来的备份 + 原子替换流程，**且必须先停掉 `antigravity-cli-daemon.service`**：2026-11-22 实测该 daemon 的 `agy remote-control serve` 会用内存里的旧凭据把 `antigravity-oauth-token` 写回，把刚切好的文件覆盖掉。该开关只在主人明确要求用脚本切一次 CLI 时使用。
 
 ## 账号库布局与旧版兼容
 
@@ -54,10 +59,12 @@ python3 antigravity-accounts/agy_account.py [--surface chat|cli] <subcommand>
 | `save <label> [--surface chat\|cli] [--note TEXT] [--email EMAIL] [--force]` | 保存当前 live 凭据到 `<vault>/<surface>/<label>/`；已有同名 label 或相同指纹时需 `--force` |
 | `list [--surface chat\|cli] [--json]` | 列出指定表面已保存账号，标出当前 live 账号与 `legacy`/`stale` 状态 |
 | `current [--surface chat\|cli] [--json]` | 只读报告当前表面 live 凭据指纹、所属 label 与运行中的会话数量 |
-| `use <label> [--surface chat\|cli] [--dry-run] [--json] [--assume-file-store]` | 切换指定表面 live 凭据：先检查 live 会话（CLI 额外检查 Secret Service 探测结论），再备份到 `_backup/`，最后原子替换并回读校验 |
+| `use <label> [--surface chat\|cli] [--allow-cli-use] [--dry-run] [--json] [--assume-file-store]` | 切换指定表面 live 凭据：先检查 live 会话（CLI 额外检查 Secret Service 探测结论），再备份到 `_backup/`，最后原子替换并回读校验。**`--surface cli` 默认拒绝**（改由 Orca UI 管理），只有 `--allow-cli-use` 放行（放行前先停 `antigravity-cli-daemon.service`） |
 | `verify [label] [--surface chat\|cli] [--update-email] [--json]` | 用 `refresh_token` 换 access token 并查 Google `userinfo` 校验邮箱（**零模型额度**），不传 label 时校验当前 live 文件 |
 
 ## 安全闸、回滚与红线
+
+**CLI 切换默认关闭**：`use --surface cli` 不带 `--allow-cli-use` 时直接拒绝（退出码 `2`），既不备份也不写入——CLI 账号切换在 Orca UI 里完成。下面这些闸门只在 `--allow-cli-use` 显式放行后才生效。
 
 1. **进程阻塞检查（不自动强杀）**：
    - **为什么要先关掉活进程**：运行中的 `agy_acp_server.par`（Chat）与 `agy` 交互会话（CLI）都在内存里缓存凭据，刷新时把整份文件回写，会直接覆盖掉刚换进去的凭据，所以切换前必须没有活进程。
@@ -70,7 +77,7 @@ python3 antigravity-accounts/agy_account.py [--surface chat|cli] <subcommand>
      - `--assume-file-store` 是唯一的显式放行开关：只有在确认 `agy` 确实读写 `antigravity-oauth-token` 文件时才用，并在输出里打印风险警告。
 
 > [!IMPORTANT]
-> 为什么默认拒绝而不是放行：密钥库接管凭据时，替换文件属于“看起来成功、实际没换”的静默失效，比直接报错更危险；所以探测拿不到确定结论时宁可拒绝。当前这台开发机实测无 Secret Service——`gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus --method org.freedesktop.DBus.NameHasOwner org.freedesktop.secrets` → `(false,)`（无 owner），因此 `use --surface cli` 正常放行。
+> 为什么默认拒绝而不是放行：密钥库接管凭据时，替换文件属于“看起来成功、实际没换”的静默失效，比直接报错更危险；所以探测拿不到确定结论时宁可拒绝。当前这台开发机实测无 Secret Service——`gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus --method org.freedesktop.DBus.NameHasOwner org.freedesktop.secrets` → `(false,)`（无 owner），因此 `use --surface cli --allow-cli-use` 正常放行（不带该开关则按上文的“CLI 切换默认关闭”直接拒绝）。
 >
 > 另外：CLI 目录下的 `cache/antigravity-keyring-unavailable` **不是 `agy` 写的**，它是 Orca daemon 的标记（含义是“Orca 无法确认 `agy` 会用哪个凭据存储”，daemon 非 darwin 平台直接拒绝原生切换）。本脚本不再把它当门禁开关。
 2. **原子替换与自动/手动回滚**：
