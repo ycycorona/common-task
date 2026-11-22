@@ -16,7 +16,7 @@ principles、Validation and Git、Task closeout 全部适用。下面只写这�
   - `cli`：`~/.gemini/antigravity-cli/antigravity-oauth-token`（可由 `--home` / `AGY_CLI_DIR` 覆盖）；**绝不要在 `cli` 路径读取 `GEMINI_HOME`**（Orca Chat 会话会注入 `GEMINI_HOME`），也不要修改 `~/.config/antigravity/credential-user-scope`（属于 `authstore` 插件/MCP）或 `antigravity_state.pbtxt` / `cache/`。
 - **严禁输出任何 token 明文**（`refresh_token`、`client_secret`、`access_token`、`id_token`）；日志与报错只允许出现 label、指纹前 8 位、`project_id`、`auth_method`、邮箱、字节数、时间戳。
 - `use` 的安全闸不得绕过或加入静默强杀逻辑：
-  - `chat` 检查目标 `GEMINI_HOME` 下的 live `agy_acp_server.par` 进程。
+  - `chat` 检查目标 `GEMINI_HOME` 下的 live `agy_acp_server.par` 进程。（闸门只为防止活进程在内存里缓存旧凭据、刷新时整文件回写覆盖切换结果，与“能否继续原会话”无关：切完直接在原会话继续即可，Orca 会新拉进程读新凭据。）
   - `cli` 检查**真实探测**的 Secret Service 结论（`gdbus call … NameHasOwner org.freedesktop.secrets`，回退 `busctl --user --no-pager list`，每条 `timeout 5s`）以及目标 `HOME` 下的 live `agy` 进程（仅排除 `agy_acp_server*` 与 `agy remote-control`）。
   - Secret Service 门禁默认 fail-closed：只有 `absent` 放行；`present`（密钥库可能接管凭据）与 `unknown`（探测失败）都拒绝，退出码 `2`；唯一显式放行开关是 `--assume-file-store`（必须打印风险警告）。探测逻辑保持 `probe_secret_service(runner=…)` 可注入，方便自检模拟三种结论。
   - `cache/antigravity-keyring-unavailable` 是 **Orca daemon 的标记**，不是 `agy` 写的，禁止再把它当门禁（历史死条件已删除；真机 `agy` 二进制里也没有这个字符串）。

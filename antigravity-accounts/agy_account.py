@@ -1380,9 +1380,15 @@ def cmd_use(args: argparse.Namespace) -> int:
         if backup_dir:
             print(f"切换前备份：{backup_dir}")
         if surface == "chat":
-            print("提示：请重开 Antigravity Chat 会话后生效（不需要重启 Orca）。")
+            print(
+                "提示：切换已完成，该表面此刻没有活进程（这是切换的前提）；"
+                "直接在原会话继续即可 —— Orca 会新拉进程读新凭据，不需要重启，也不需要另开会话。"
+            )
         else:
-            print("提示：请重新启动 agy CLI 会话后生效（不影响 agy remote-control serve 与 Chat 会话）。")
+            print(
+                "提示：直接在原终端重新跑 agy 即可（原会话继续亦可），不需要重启"
+                "（不影响 agy remote-control serve 与 Chat 会话）。"
+            )
             if keyring_probe is not None and keyring_probe.verdict != "absent":
                 print(
                     f"警告：Secret Service 探测为 {keyring_probe.verdict}，已按 --assume-file-store 继续；"

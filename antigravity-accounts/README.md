@@ -11,7 +11,7 @@ Orca **Chat 模式**与 **`agy` CLI** 的 AntiGravity 账号凭据保存、查�
 | Keyring 行为 | 非 macOS 上强制文件后端，不走 keyring | `agy` 优先尝试 keyring，无 `org.freedesktop.secrets` 时回落到文件；`use` 只有**探测到 Secret Service 确实不存在**才放行（`present`/`unknown` 一律拒绝） |
 | 不需切换的文件 | `settings.json` | `~/.config/antigravity/credential-user-scope`（仅 `authstore` 插件/MCP 隔离用）、`antigravity_state.pbtxt`、`cache/`、`last_check.timestamp` |
 | `use` 阻塞检查 | 目标 `GEMINI_HOME` 下正在运行的 `agy_acp_server.par` | 目标 `HOME` 下正在运行的 `agy` CLI（排除 `agy_acp_server*` 与 `agy remote-control`） |
-| 生效方式 | 重开 Antigravity Chat 会话（不需重启 Orca） | 重开 `agy` CLI 会话（不影响 `agy remote-control serve` 与 Chat） |
+| 生效方式 | 切完直接在原会话继续（Chat）/ 重新跑 `agy`（CLI）；**不需要**重启 Orca、**不需要**另开新会话 | 切完直接在原终端重新跑 `agy`（原会话继续亦可）；**不需要**重启、**不需要**另开新会话 |
 
 > [!NOTE]
 > 为什么需要它：Orca 原生 `orca account` 只管 CLI 表面且在裸金属 Linux（非 SSH/WSL）上会直接拒绝切换；Chat 表面只有登录流程、没有切换已保存账号的入口。`--surface cli` 实测确认在无 Secret Service 的 Linux 宿主上，替换 `antigravity-oauth-token` 单文件即可完成账号切换。
@@ -60,6 +60,8 @@ python3 antigravity-accounts/agy_account.py [--surface chat|cli] <subcommand>
 ## 安全闸、回滚与红线
 
 1. **进程阻塞检查（不自动强杀）**：
+   - **为什么要先关掉活进程**：运行中的 `agy_acp_server.par`（Chat）与 `agy` 交互会话（CLI）都在内存里缓存凭据，刷新时把整份文件回写，会直接覆盖掉刚换进去的凭据，所以切换前必须没有活进程。
+   - **关掉 ≠ 丢上下文**：进程只是在内存里缓存了旧凭据，会话本身仍在磁盘上；切完直接在原会话里继续即可 —— Orca 会为新一轮新拉一个 `agy_acp_server.par`，它读的就是切换后的凭据文件。2026-11-22 真机实测：15:36 切到 `alt1`，16:38 继续会话 `e6ce20cd`，新进程（pid 2390393）已用 `alt1` 正常运行。
    - **Chat**：运行中的 `agy_acp_server.par` 在内存缓存凭据并在刷新时整文件写回 `acp_token.json`；检测到同 `GEMINI_HOME` 活进程即拒绝（退出码 `2`）。
    - **CLI**：`agy` 交互会话在内存持有凭据并在刷新时覆盖写回 `antigravity-oauth-token`；检测到同 `HOME` 的 `agy` 进程即拒绝（退出码 `2`），但显式排除 `agy_acp_server*` 与 `agy remote-control`。当命令行参数或 `HOME` 不可判定时宁可拒绝（防误切）。
    - **CLI Secret Service 门禁（默认 fail-closed）**：`use --surface cli` 先真实探测会话总线上有没有 `org.freedesktop.secrets`，结论只有三种：`present` / `absent` / `unknown`。只有 `absent` 才放行；`present` 与 `unknown` 都拒绝（退出码 `2`），因为此时 `agy` 可能把凭据搬进密钥库，只替换 `antigravity-oauth-token` 既不一定生效，还可能让两份存储各存一半。

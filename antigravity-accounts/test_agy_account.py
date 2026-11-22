@@ -289,7 +289,7 @@ def test_use_switch_backup_and_dry_run() -> None:
         rc, out, err = sb.run_inproc(["use", "acct-a"])
         assert rc == 0, err
         assert "acct-a" in out
-        assert "重开 Antigravity Chat 会话后生效" in out
+        assert "直接在原会话继续即可" in out
         assert "REFRESH_SECRET_ALPHA" not in out + err
         assert "REFRESH_SECRET_BETA" not in out + err
         assert sb.live_token.read_bytes() == tok_a
@@ -721,7 +721,7 @@ def test_cli_use_switch_backup_and_dry_run() -> None:
         # Real switch cli-b -> cli-a
         rc, out, err = sb.run_inproc(["use", "cli-a", "--surface", "cli"])
         assert rc == 0, err
-        assert "重新启动 agy CLI" in out
+        assert "直接在原终端重新跑 agy 即可" in out
         for secret in ("CLI_REFRESH_A", "CLI_ACCESS_A", "CLI_REFRESH_B", "CLI_ACCESS_B"):
             assert secret not in out + err
         assert sb.live_cli_token.read_bytes() == cli_a
