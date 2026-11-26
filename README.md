@@ -42,6 +42,7 @@ pip install -r requirements.txt
 | `portal/` | 个人开发门户站（free-arm 上的 Homepage 配置：机器与服务入口、状态灯、平台深链） |
 | `ai-compact/` | AI Agent 自动压缩阈值的探测与设置 |
 | `agent-sessions/` | 按路径列出 Agent 会话与上下文用量（claude / pi / codex，零依赖） |
+| `agy-refresh/` | Antigravity (agy) 账号与进程状态检查及切号刷新（本机/SSH 远端，零依赖） |
 | [`oci/`](oci/README.md) | Oracle Cloud 账户与资源治理（实例、VCN、块存储、Object Storage 桶；凭据在 `~/.oci`，不入库） |
 | `archives/` | 一次性/归档任务（荷兰超市宣传册等） |
 | `orca-server/`、`orca-windows/` | Orca 无头服务端的更新维护（Linux / Windows） |
@@ -338,6 +339,46 @@ cp "$PI_SESSION_FILE" /tmp/x.jsonl && printf '{"type":"get_session_stats"}\n' | 
 
 返回 `contextUsage {tokens, contextWindow, percent}`。这条路只适用 pi，混进表里会让 pi 那一列
 悄悄比 claude / codex 高几个百分点，所以没做进脚本。
+
+### 11. Antigravity 切号刷新运维工具 (`agy-refresh/agy_refresh.py`)
+
+解决切换 Antigravity (`agy`) 账号后，切号前已启动的 `agy acp` 进程仍在内存中缓存旧账号 token 导致 Orca Chat Session 持续报 `RESOURCE_EXHAUSTED (code 429)` 的问题。
+
+**生效原理**: `agy acp` 只在进程启动时读取一次登录凭据。将旧账号的 `agy acp` 进程 `SIGTERM` 停掉后，用户在 Orca 原会话继续发消息时，Orca 会自动拉起新 `agy acp` 并通过 `session/resume` 接回原会话上下文、无缝加载新账号凭据。
+
+**安全护栏**:
+- 默认 **dry-run** 模式（只读展示清单，不杀任何进程）；显式加 `--apply` 才执行终止。
+- 沿 PPID 祖先链检测自身是否运行在某个 `agy acp` 之下，自动跳过自身祖先进程避免自杀。
+- 终止前用 `ps -p <pid> -o pid=,command=` 二次核验命令行仍匹配 `agy`，防止 OS 回收重分配 PID 误杀。
+- 发送 `SIGTERM` 后等待 1–2 秒回查确认退出状态。
+- 默认跳过常驻守护进程 `agy remote-control serve`（可通过 `--include-remote-control` 纳入）。
+- 绝不碰凭据/token/keychain 文件，仅读取 `ps` 与 `~/.gemini/antigravity-cli/log/` 中的非敏感行。
+
+**常用命令**:
+```bash
+# 本机只读预览（查看当前运行中的 agy 进程、关联账号与 429 状态）
+python3 agy-refresh/agy_refresh.py
+
+# 本机确认清理旧账号进程
+python3 agy-refresh/agy_refresh.py --apply
+
+# 远端主机（如 free-arm）只读预览
+python3 agy-refresh/agy_refresh.py --host free-arm
+
+# 远端主机确认清理旧账号进程
+python3 agy-refresh/agy_refresh.py --host free-arm --apply
+
+# 本机 + 远端主机联合检查
+python3 agy-refresh/agy_refresh.py --local --host free-arm
+
+# 强制清理所有非自身 ACP 进程（即使账号相同）
+python3 agy-refresh/agy_refresh.py --all-acp
+
+# 输出 JSON 供脚本或 Agent 消费
+python3 agy-refresh/agy_refresh.py --json
+```
+
+自检 `python3 agy-refresh/test_agy_refresh.py`。
 
 ---
 
